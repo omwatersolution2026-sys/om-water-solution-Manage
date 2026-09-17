@@ -4,24 +4,124 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.replace('dashboard.html');
     }
 
-    const loginForm = document.getElementById('login-form'); // Apna form ID check kar lena
-    const pinInput = document.getElementById('pin-input');   // Apna input ID check kar lena
+    // --- 1. DOM Elements Selection ---
+    const numpadBtns = document.querySelectorAll('.numpad-btn');
+    const backspaceBtn = document.getElementById('backspace-btn');
+    const pinDots = document.querySelectorAll('.pin-dot');
+    const errorAlert = document.getElementById('error-alert');
+    const errorMsg = document.getElementById('error-msg');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const dotContainer = pinDots[0].parentElement;
 
-    if (loginForm) {
-        loginForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const enteredPin = pinInput.value;
+    // --- 2. State Management ---
+    let currentPin = '';
+    const CORRECT_PIN = '2026'; // Aapka Universal Admin PIN
+    let isProcessing = false; // Multiple clicks ko block karne ke liye
 
-            if (enteredPin === '2026') {
-                // YE HAI MAIN FIX: Session set karna zaroori hai
-                sessionStorage.setItem('adminAuth', 'true');
-                
-                // Uske baad dashboard par redirect karo
-                window.location.replace('dashboard.html');
+    // --- 3. UI Update Logic (Dots Fill Effect) ---
+    const updateDotsUI = () => {
+        pinDots.forEach((dot, index) => {
+            if (index < currentPin.length) {
+                dot.classList.add('filled');
             } else {
-                alert('Galat PIN! Kripya sahi 4-digit code (2026) dalein.');
-                pinInput.value = ''; // Input clear kar do
+                dot.classList.remove('filled');
             }
         });
+    };
+
+    // --- 4. Error Handling & Animation ---
+    const triggerErrorState = () => {
+        if (navigator.vibrate) {
+            navigator.vibrate([50, 50, 50]);
+        }
+        errorMsg.textContent = "Incorrect PIN. Please try again.";
+        errorAlert.classList.remove('hidden');
+        errorAlert.classList.add('fade-in-up');
+        dotContainer.classList.add('animate-shake');
+
+        setTimeout(() => {
+            dotContainer.classList.remove('animate-shake');
+            currentPin = '';
+            updateDotsUI();
+            isProcessing = false;
+        }, 500);
+    };
+
+    // --- 5. PIN Verification Logic ---
+    const verifyPin = () => {
+        isProcessing = true; 
+
+        if (currentPin === CORRECT_PIN) {
+            errorAlert.classList.add('hidden');
+            
+            if(loadingOverlay) {
+                loadingOverlay.classList.remove('hidden');
+                loadingOverlay.classList.add('flex', 'fade-in-up');
+            }
+            
+            // 👉 YE RAHA MAIN FIX: 'adminAuth' use kiya hai
+            sessionStorage.setItem('adminAuth', 'true');
+            sessionStorage.setItem('loginTime', new Date().toISOString());
+            
+            setTimeout(() => {
+                window.location.href = 'dashboard.html';
+            }, 800);
+        } else {
+            triggerErrorState();
+        }
+    };
+
+    // --- 6. Input Handlers ---
+    const handleInput = (value) => {
+        if (isProcessing) return; 
+
+        if (!errorAlert.classList.contains('hidden')) {
+            errorAlert.classList.add('hidden');
+        }
+
+        if (currentPin.length < 4) {
+            currentPin += value;
+            updateDotsUI();
+
+            if (currentPin.length === 4) {
+                setTimeout(verifyPin, 150);
+            }
+        }
+    };
+
+    const handleBackspace = () => {
+        if (isProcessing) return;
+
+        if (currentPin.length > 0) {
+            currentPin = currentPin.slice(0, -1);
+            updateDotsUI();
+            errorAlert.classList.add('hidden');
+        }
+    };
+
+    // --- 7. Event Listeners ---
+    numpadBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault(); 
+            const value = e.target.closest('.numpad-btn').dataset.val;
+            handleInput(value);
+        });
+    });
+
+    if(backspaceBtn) {
+        backspaceBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            handleBackspace();
+        });
     }
+
+    // --- 8. Keyboard Support ---
+    document.addEventListener('keydown', (e) => {
+        if (isProcessing) return;
+        if (e.key >= '0' && e.key <= '9') {
+            handleInput(e.key);
+        } else if (e.key === 'Backspace') {
+            handleBackspace();
+        }
+    });
 });

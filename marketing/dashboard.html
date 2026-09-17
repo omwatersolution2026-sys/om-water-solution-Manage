@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Marketing Pipeline | Om Water Solution</title>
+    
+    <!-- Security: Only Marketing Session Allowed -->
+    <script>
+        if (!sessionStorage.getItem('isMarketingLoggedIn')) {
+            window.location.replace('index.html');
+        }
+    </script>
+
+    <!-- Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Tailwind Config for Marketing Theme -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        dark: '#312E81', /* Indigo 900 */
+                        light: '#ffffff',
+                        muted: '#F8FAFC',
+                        borderGrey: '#E2E8F0',
+                        accent: '#4F46E5', /* Indigo 600 */
+                        success: '#10B981',
+                        warning: '#F59E0B'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-muted text-gray-800 antialiased pb-24">
+
+    <!-- Glassmorphism Navbar -->
+    <nav class="glass-effect sticky top-0 z-40 px-4 sm:px-6 py-4">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-accent rounded-xl flex items-center justify-center text-white shadow-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                </div>
+                <div>
+                    <h1 class="font-semibold text-lg leading-tight tracking-tight text-dark">Lead Pipeline</h1>
+                    <p class="text-[10px] text-gray-500 font-bold tracking-widest uppercase">Marketing Desk</p>
+                </div>
+            </div>
+            <button id="logout-btn" class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:bg-indigo-50 hover:text-accent transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Dashboard -->
+    <main class="max-w-4xl mx-auto px-4 mt-6 space-y-6 fade-in-up">
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-3 gap-3">
+            <div class="bg-white p-4 rounded-2xl border border-borderGrey shadow-sm text-center">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total</p>
+                <p class="text-2xl font-bold text-dark" id="stat-total">0</p>
+            </div>
+            <div class="bg-orange-50 p-4 rounded-2xl border border-orange-100 shadow-sm text-center">
+                <p class="text-[10px] font-bold text-orange-400 uppercase tracking-wider mb-1">Follow-up</p>
+                <p class="text-2xl font-bold text-warning" id="stat-followup">0</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-2xl border border-green-100 shadow-sm text-center">
+                <p class="text-[10px] font-bold text-green-500 uppercase tracking-wider mb-1">Converted</p>
+                <p class="text-2xl font-bold text-success" id="stat-converted">0</p>
+            </div>
+        </div>
+
+        <hr class="border-borderGrey">
+
+        <!-- Leads List Container -->
+        <div>
+            <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Active Leads</h2>
+            <div id="leads-list" class="space-y-4">
+                <!-- Skeleton Loader -->
+                <div class="bg-white p-5 rounded-2xl border border-borderGrey animate-pulse">
+                    <div class="h-4 w-32 bg-gray-200 rounded mb-3"></div>
+                    <div class="h-3 w-48 bg-gray-100 rounded mb-4"></div>
+                    <div class="flex gap-2"><div class="h-8 w-20 bg-gray-100 rounded-lg"></div></div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Floating Action Button (Add New Lead) -->
+    <div class="fixed bottom-6 left-0 right-0 px-4 max-w-4xl mx-auto z-40">
+        <button id="open-add-lead-btn" class="w-full bg-accent text-white font-medium py-4 rounded-2xl shadow-[0_8px_30px_rgb(79,70,229,0.25)] hover:bg-indigo-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Add New Lead
+        </button>
+    </div>
+
+    <!-- MODAL 1: ADD NEW LEAD -->
+    <div id="add-lead-modal" class="fixed inset-0 bg-dark/60 backdrop-blur-sm z-50 hidden flex-col justify-end transition-opacity duration-300 opacity-0">
+        <div id="add-modal-content" class="bg-white w-full max-w-4xl mx-auto rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl transform translate-y-full transition-transform duration-300">
+            <div class="flex justify-between items-center px-6 py-4 border-b border-gray-100">
+                <h3 class="text-lg font-bold text-dark">Add Calling Lead</h3>
+                <button class="close-modal-btn w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full text-gray-500"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <form id="add-lead-form" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">Client Name</label>
+                        <input type="text" id="lead-name" required class="w-full px-4 py-3 bg-muted border border-borderGrey rounded-xl focus:border-accent focus:ring-1 focus:ring-accent outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">Phone Number</label>
+                        <input type="tel" id="lead-phone" required pattern="[0-9]{10}" class="w-full px-4 py-3 bg-muted border border-borderGrey rounded-xl focus:border-accent focus:ring-1 focus:ring-accent outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">Status</label>
+                        <select id="lead-status" class="w-full px-4 py-3 bg-muted border border-borderGrey rounded-xl focus:border-accent outline-none">
+                            <option value="New">New Lead</option>
+                            <option value="Follow-up">Follow-up Required</option>
+                            <option value="Not Interested">Not Interested</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">Notes / Remarks</label>
+                        <textarea id="lead-notes" rows="2" class="w-full px-4 py-3 bg-muted border border-borderGrey rounded-xl focus:border-accent outline-none" placeholder="E.g. Call back on Monday..."></textarea>
+                    </div>
+                    <div class="pt-4 pb-8"><button type="submit" id="save-lead-btn" class="w-full bg-accent text-white font-bold py-4 rounded-xl">Save Lead</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: CONVERT TO CUSTOMER (Pushes to Master DB) -->
+    <div id="convert-modal" class="fixed inset-0 bg-dark/60 backdrop-blur-sm z-[60] hidden flex-col justify-end transition-opacity duration-300 opacity-0">
+        <div id="convert-modal-content" class="bg-white w-full max-w-4xl mx-auto rounded-t-3xl max-h-[90vh] flex flex-col shadow-2xl transform translate-y-full transition-transform duration-300">
+            <div class="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-green-50 rounded-t-3xl">
+                <h3 class="text-lg font-bold text-success flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Convert to Customer
+                </h3>
+                <button class="close-convert-btn w-8 h-8 flex items-center justify-center bg-white rounded-full text-gray-500 shadow-sm"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <p class="text-sm text-gray-500 mb-4">Entering data here will directly push this client to the Admin and Tech portals for AMC service.</p>
+                <form id="convert-form" class="space-y-4">
+                    <input type="hidden" id="convert-lead-id">
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Customer Name</label><input type="text" id="conv-name" required class="w-full px-4 py-3 bg-muted border border-borderGrey rounded-xl"></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Phone Number</label><input type="tel" id="conv-phone" required class="w-full px-4 py-3 bg-muted border border-borderGrey rounded-xl"></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Full Address</label><textarea id="conv-address" required rows="2" class="w-full px-4 py-3 bg-muted border border-borderGrey rounded-xl"></textarea></div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="block text-xs font-semibold text-gray-500 mb-1">Unit Model</label><input type="text" id="conv-unit" required class="w-full px-4 py-3 bg-muted border border-borderGrey rounded-xl"></div>
+                        <div><label class="block text-xs font-semibold text-gray-500 mb-1">AMC Amount (₹)</label><input type="number" id="conv-amount" required class="w-full px-4 py-3 bg-muted border border-borderGrey rounded-xl font-bold"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="block text-xs font-semibold text-gray-500 mb-1">Start Date</label><input type="date" id="conv-start" required class="w-full px-4 py-3 bg-muted border border-borderGrey rounded-xl text-sm"></div>
+                        <div><label class="block text-xs font-semibold text-gray-500 mb-1">End Date</label><input type="date" id="conv-end" required class="w-full px-4 py-3 bg-muted border border-borderGrey rounded-xl text-sm"></div>
+                    </div>
+                    <div class="pt-4 pb-8"><button type="submit" id="confirm-convert-btn" class="w-full bg-success text-white font-bold py-4 rounded-xl shadow-md hover:bg-green-600">Finalize Customer</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Connection -->
+    <script type="module" src="js/dashboard.js"></script>
+</body>
+</html>

@@ -2,205 +2,87 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Admin Dashboard | Om Water Solution</title>
-    
-    <!-- Ultra-Secure Route Protection -->
-    <script>
-        if (!sessionStorage.getItem('isAdminLoggedIn')) {
-            window.location.replace('index.html');
-        }
-    </script>
-
-    <!-- Typography -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Tailwind CSS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Admin | Om Water Solution</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="css/style.css">
-
-    <!-- Tailwind Minimalist Config -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: {
-                        dark: '#111827',
-                        light: '#ffffff',
-                        muted: '#f9fafb',
-                        borderGrey: '#e5e7eb',
-                        iosBlue: '#007AFF'
-                    }
-                }
-            }
-        }
-    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style> body { font-family: 'Inter', sans-serif; } </style>
 </head>
-<body class="bg-muted text-dark antialiased pb-24">
+<body class="bg-slate-100 text-slate-800 antialiased">
 
-    <!-- Minimal Glassmorphism Navbar -->
-    <nav class="glass-effect sticky top-0 z-40 px-4 sm:px-6 py-4">
-        <div class="max-w-4xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-dark rounded-xl flex items-center justify-center text-white shadow-sm">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                </div>
-                <div>
-                    <h1 class="font-semibold text-lg leading-tight tracking-tight">Om Water</h1>
-                    <p class="text-[10px] text-gray-500 font-medium tracking-widest uppercase">Admin Headquarters</p>
-                </div>
+    <!-- Top Navigation -->
+    <nav class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-10 shadow-sm">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center font-black text-xl shadow-inner">O</div>
+            <div>
+                <h1 class="font-bold text-xl leading-none text-slate-900">Admin Control</h1>
+                <p class="text-xs text-slate-500 font-medium">Om Water Solution</p>
             </div>
-            <button id="logout-btn" class="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-dark transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+        </div>
+        <div class="flex items-center gap-4">
+            <!-- Notification Bell -->
+            <button class="relative p-2 text-slate-400 hover:text-slate-600 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                <span id="bell-badge" class="absolute top-1 right-1 w-3 h-3 bg-red-500 border-2 border-white rounded-full hidden"></span>
             </button>
+            <button id="logout-btn" class="text-sm font-semibold text-red-500 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg transition-colors">Logout</button>
         </div>
     </nav>
 
-    <!-- Main Content Area -->
-    <main class="max-w-4xl mx-auto px-4 mt-6 space-y-6 fade-in-up">
-
-        <!-- Header & Date -->
-        <div>
-            <h2 class="text-2xl font-bold tracking-tight">Overview</h2>
-            <p id="current-date" class="text-sm text-gray-500 font-medium mt-1">Loading date...</p>
-        </div>
-
-        <!-- Sleek Alert Box (Services Due) -->
-        <div class="bg-light border border-red-100 rounded-2xl p-4 shadow-[0_2px_10px_rgb(0,0,0,0.02)] flex items-center gap-4 relative overflow-hidden">
-            <div class="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>
-            <div class="bg-red-50 p-2.5 rounded-full text-red-600">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+    <div class="max-w-7xl mx-auto p-6">
+        
+        <!-- Stats Overview Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-blue-500">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total AMC Customers</p>
+                <h3 class="text-3xl font-black text-slate-800" id="stat-total">0</h3>
             </div>
-            <div>
-                <h3 class="font-semibold text-sm">Action Required</h3>
-                <p class="text-xs text-gray-500 mt-0.5"><span id="due-services-count" class="font-bold text-dark text-sm">0</span> Services due today</p>
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-orange-400">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Services Today</p>
+                <h3 class="text-3xl font-black text-orange-500" id="stat-today">0</h3>
             </div>
-            <button class="ml-auto text-xs font-semibold text-iosBlue bg-blue-50 px-3 py-1.5 rounded-full">View</button>
-        </div>
-
-        <!-- Premium Stats Grid -->
-        <div class="grid grid-cols-2 gap-4">
-            <!-- Revenue Box -->
-            <div class="bg-light p-5 rounded-2xl border border-borderGrey shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
-                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Total Revenue</p>
-                <h3 class="text-2xl font-semibold tracking-tight">₹<span id="total-revenue">0</span></h3>
-                <p class="text-[10px] text-gray-400 mt-1">All time collection</p>
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-red-500">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Missed / Overdue</p>
+                <h3 class="text-3xl font-black text-red-600" id="stat-missed">0</h3>
             </div>
-            
-            <!-- Active AMCs Box -->
-            <div class="bg-light p-5 rounded-2xl border border-borderGrey shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
-                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Active AMCs</p>
-                <h3 class="text-2xl font-semibold tracking-tight" id="total-amcs">0</h3>
-                <p class="text-[10px] text-gray-400 mt-1">Total customer base</p>
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-green-500">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Upcoming (This Month)</p>
+                <h3 class="text-3xl font-black text-green-600" id="stat-upcoming">0</h3>
             </div>
         </div>
 
-        <!-- Recent Customers List -->
-        <div class="bg-light rounded-2xl border border-borderGrey shadow-[0_2px_10px_rgb(0,0,0,0.02)] overflow-hidden">
-            <div class="flex justify-between items-center p-5 border-b border-gray-100">
-                <h3 class="font-semibold text-sm">Recent Customers</h3>
-                <button class="text-xs font-medium text-gray-500 hover:text-dark">See All</button>
-            </div>
-            
-            <div id="customers-list" class="divide-y divide-gray-50">
-                <!-- Skeleton Loader -->
-                <div class="p-5 flex justify-between items-center animate-pulse">
-                    <div class="space-y-2">
-                        <div class="h-4 w-28 bg-gray-200 rounded"></div>
-                        <div class="h-3 w-40 bg-gray-100 rounded"></div>
-                    </div>
-                    <div class="h-6 w-16 bg-gray-100 rounded-full"></div>
+        <!-- Master Data Table -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <h2 class="text-lg font-bold text-slate-800">Master Service Pipeline</h2>
+                <!-- Filters -->
+                <div class="flex bg-slate-100 p-1 rounded-lg">
+                    <button class="filter-btn active px-4 py-1.5 text-sm font-semibold rounded-md bg-white shadow text-slate-800" data-filter="all">All</button>
+                    <button class="filter-btn px-4 py-1.5 text-sm font-semibold rounded-md text-slate-500 hover:text-slate-800 transition-colors" data-filter="missed">Missed</button>
+                    <button class="filter-btn px-4 py-1.5 text-sm font-semibold rounded-md text-slate-500 hover:text-slate-800 transition-colors" data-filter="today">Today</button>
+                    <button class="filter-btn px-4 py-1.5 text-sm font-semibold rounded-md text-slate-500 hover:text-slate-800 transition-colors" data-filter="upcoming">Upcoming</button>
                 </div>
             </div>
-        </div>
-
-    </main>
-
-    <!-- Floating Action Button (FAB) for Mobile -->
-    <div class="fixed bottom-6 left-0 right-0 px-4 max-w-4xl mx-auto z-40">
-        <button id="open-add-cx-btn" class="w-full bg-dark text-white font-medium py-4 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:bg-black active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-            Add New AMC Entry
-        </button>
-    </div>
-
-    <!-- ADD NEW CUSTOMER MODAL (iOS Bottom Sheet Style) -->
-    <div id="add-cx-modal" class="fixed inset-0 bg-dark/40 backdrop-blur-sm z-50 hidden flex-col justify-end transition-opacity duration-300 opacity-0">
-        
-        <div id="modal-content" class="bg-white w-full max-w-4xl mx-auto rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl transform translate-y-full transition-transform duration-300">
             
-            <!-- Modal Handle (Apple style) -->
-            <div class="w-full flex justify-center pt-3 pb-1">
-                <div class="w-12 h-1.5 bg-gray-200 rounded-full"></div>
-            </div>
-
-            <!-- Modal Header -->
-            <div class="flex justify-between items-center px-6 py-4 border-b border-gray-100">
-                <h3 class="text-lg font-semibold tracking-tight">New Customer</h3>
-                <button id="close-modal-btn" class="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full text-gray-500 active:bg-gray-200 transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-
-            <!-- Scrollable Form Body -->
-            <div class="p-6 overflow-y-auto custom-scrollbar">
-                <form id="add-cx-form" class="space-y-5">
-                    
-                    <div>
-                        <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Customer Name</label>
-                        <input type="text" id="cx-name" required class="w-full px-4 py-3.5 bg-muted border border-borderGrey rounded-xl focus:outline-none focus:border-dark focus:bg-white transition-all text-sm font-medium" placeholder="e.g. Agarwal Sir">
-                    </div>
-
-                    <div>
-                        <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Full Address</label>
-                        <textarea id="cx-address" required rows="2" class="w-full px-4 py-3 bg-muted border border-borderGrey rounded-xl focus:outline-none focus:border-dark focus:bg-white transition-all text-sm" placeholder="e.g. Wing 13/603 Lodha Amara, Kolshet Rd..."></textarea>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Contact No.</label>
-                            <input type="tel" id="cx-phone" required pattern="[0-9]{10}" class="w-full px-4 py-3.5 bg-muted border border-borderGrey rounded-xl focus:outline-none focus:border-dark focus:bg-white transition-all text-sm" placeholder="9876543210">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Unit Model</label>
-                            <input type="text" id="cx-unit" required class="w-full px-4 py-3.5 bg-muted border border-borderGrey rounded-xl focus:outline-none focus:border-dark focus:bg-white transition-all text-sm" placeholder="e.g. Compact">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Contract Start</label>
-                            <input type="date" id="cx-start-date" required class="w-full px-4 py-3.5 bg-muted border border-borderGrey rounded-xl focus:outline-none focus:border-dark focus:bg-white transition-all text-sm text-gray-700">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Contract End</label>
-                            <input type="date" id="cx-end-date" required class="w-full px-4 py-3.5 bg-muted border border-borderGrey rounded-xl focus:outline-none focus:border-dark focus:bg-white transition-all text-sm text-gray-700">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4 pt-2">
-                        <div>
-                            <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Amount (₹)</label>
-                            <input type="number" id="cx-amount" required class="w-full px-4 py-3.5 bg-muted border border-borderGrey rounded-xl focus:outline-none focus:border-dark focus:bg-white transition-all text-sm font-semibold" placeholder="1800">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Bill No.</label>
-                            <input type="text" id="cx-bill" class="w-full px-4 py-3.5 bg-muted border border-borderGrey rounded-xl focus:outline-none focus:border-dark focus:bg-white transition-all text-sm" placeholder="28004">
-                        </div>
-                    </div>
-
-                    <div class="pt-4 pb-8">
-                        <button type="submit" id="save-cx-btn" class="w-full bg-iosBlue text-white font-medium py-4 rounded-xl shadow-sm hover:bg-blue-600 transition-colors flex justify-center items-center gap-2">
-                            <span>Save AMC Record</span>
-                        </button>
-                    </div>
-                </form>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
+                            <th class="p-4 font-bold">Customer Info</th>
+                            <th class="p-4 font-bold">Unit / AMC</th>
+                            <th class="p-4 font-bold">Next Service Date</th>
+                            <th class="p-4 font-bold">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="master-table-body" class="divide-y divide-slate-100">
+                        <tr><td colspan="4" class="p-8 text-center text-slate-400">Loading master data...</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
+
     </div>
 
-    <!-- Logic Script -->
     <script type="module" src="js/dashboard.js"></script>
 </body>
 </html>

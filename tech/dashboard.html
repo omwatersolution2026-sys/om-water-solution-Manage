@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tech Dashboard | Om Water Solution</title>
+    
+    <!-- Security: Only Tech Session Allowed -->
+    <script>
+        if (!sessionStorage.getItem('isTechLoggedIn')) {
+            window.location.replace('index.html');
+        }
+    </script>
+
+    <!-- Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- PDF Generation Library (No Backend Required) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        dark: '#111827',
+                        light: '#ffffff',
+                        muted: '#f9fafb',
+                        borderGrey: '#e5e7eb',
+                        iosGreen: '#34C759', /* Apple Success Green */
+                        iosBlue: '#007AFF'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-muted text-dark antialiased pb-24">
+
+    <!-- Minimal Glassmorphism Navbar -->
+    <nav class="glass-effect sticky top-0 z-40 px-4 sm:px-6 py-4">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-dark rounded-xl flex items-center justify-center text-white shadow-sm">
+                    <!-- Tools / Tech Icon -->
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                </div>
+                <div>
+                    <h1 class="font-semibold text-lg leading-tight tracking-tight">Om Water</h1>
+                    <p class="text-[10px] text-gray-500 font-medium tracking-widest uppercase">Engineer Access</p>
+                </div>
+            </div>
+            <button id="logout-btn" class="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-dark transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="max-w-4xl mx-auto px-4 mt-6 space-y-6 fade-in-up">
+
+        <!-- Header & Stats -->
+        <div class="flex justify-between items-end">
+            <div>
+                <h2 class="text-2xl font-bold tracking-tight">Today's Tasks</h2>
+                <p id="current-date" class="text-sm text-gray-500 font-medium mt-1">Loading date...</p>
+            </div>
+            <div class="text-right">
+                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Pending</p>
+                <p class="text-xl font-bold text-dark" id="pending-tasks">0</p>
+            </div>
+        </div>
+
+        <!-- Dynamic Task List -->
+        <div id="tasks-list" class="space-y-4">
+            <!-- Skeleton Loader -->
+            <div class="bg-light p-5 rounded-2xl border border-borderGrey shadow-[0_2px_10px_rgb(0,0,0,0.02)] animate-pulse">
+                <div class="h-4 w-32 bg-gray-200 rounded mb-3"></div>
+                <div class="h-3 w-48 bg-gray-100 rounded mb-2"></div>
+                <div class="h-3 w-40 bg-gray-100 rounded"></div>
+                <div class="flex gap-2 mt-4 pt-4 border-t border-gray-50">
+                    <div class="h-10 flex-1 bg-gray-100 rounded-xl"></div>
+                    <div class="h-10 flex-1 bg-gray-100 rounded-xl"></div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Floating Action Button (Global Access Add Customer) -->
+    <div class="fixed bottom-6 left-0 right-0 px-4 max-w-4xl mx-auto z-40">
+        <button id="open-add-cx-btn" class="w-full bg-dark text-white font-medium py-4 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:bg-black active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+            Add New Entry On-Site
+        </button>
+    </div>
+
+    <!-- ADD NEW CUSTOMER MODAL (Same as Admin for consistency) -->
+    <div id="add-cx-modal" class="fixed inset-0 bg-dark/40 backdrop-blur-sm z-50 hidden flex-col justify-end transition-opacity duration-300 opacity-0">
+        <div id="modal-content" class="bg-white w-full max-w-4xl mx-auto rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl transform translate-y-full transition-transform duration-300">
+            <div class="w-full flex justify-center pt-3 pb-1"><div class="w-12 h-1.5 bg-gray-200 rounded-full"></div></div>
+            <div class="flex justify-between items-center px-6 py-4 border-b border-gray-100">
+                <h3 class="text-lg font-semibold tracking-tight">New Field Entry</h3>
+                <button id="close-modal-btn" class="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full text-gray-500 active:bg-gray-200 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            </div>
+            <div class="p-6 overflow-y-auto custom-scrollbar">
+                <form id="add-cx-form" class="space-y-5">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Customer Name</label>
+                        <input type="text" id="cx-name" required class="w-full px-4 py-3.5 bg-muted border border-borderGrey rounded-xl focus:border-dark focus:bg-white text-sm font-medium" placeholder="e.g. Agarwal Sir">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Full Address</label>
+                        <textarea id="cx-address" required rows="2" class="w-full px-4 py-3 bg-muted border border-borderGrey rounded-xl focus:border-dark focus:bg-white text-sm" placeholder="Location..."></textarea>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Contact No.</label>
+                            <input type="tel" id="cx-phone" required pattern="[0-9]{10}" class="w-full px-4 py-3.5 bg-muted border border-borderGrey rounded-xl focus:border-dark focus:bg-white text-sm" placeholder="9876543210">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Unit Model</label>
+                            <input type="text" id="cx-unit" required class="w-full px-4 py-3.5 bg-muted border border-borderGrey rounded-xl focus:border-dark focus:bg-white text-sm" placeholder="e.g. Compact">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Start Date</label><input type="date" id="cx-start-date" required class="w-full px-4 py-3.5 bg-muted border border-borderGrey rounded-xl focus:border-dark focus:bg-white text-sm"></div>
+                        <div><label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">End Date</label><input type="date" id="cx-end-date" required class="w-full px-4 py-3.5 bg-muted border border-borderGrey rounded-xl focus:border-dark focus:bg-white text-sm"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 pt-2">
+                        <div><label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Amount (₹)</label><input type="number" id="cx-amount" required class="w-full px-4 py-3.5 bg-muted border border-borderGrey rounded-xl focus:border-dark focus:bg-white text-sm font-semibold" placeholder="1800"></div>
+                        <div><label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Bill No.</label><input type="text" id="cx-bill" class="w-full px-4 py-3.5 bg-muted border border-borderGrey rounded-xl focus:border-dark focus:bg-white text-sm"></div>
+                    </div>
+                    <div class="pt-4 pb-8"><button type="submit" id="save-cx-btn" class="w-full bg-iosBlue text-white font-medium py-4 rounded-xl shadow-sm hover:bg-blue-600 transition-colors flex justify-center items-center">Save & Sync</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Printable Invoice Template (For PDF Generation) -->
+    <div id="invoice-template" class="hidden bg-white p-8 absolute top-[-9999px] left-[-9999px] w-[800px] border">
+        <!-- Exact match of your physical Service Card logic -->
+        <div class="text-center border-b-2 border-red-600 pb-4 mb-4">
+            <h1 class="text-3xl font-bold text-red-700">Om Water Solution</h1>
+            <p class="text-sm">H. No: 1432/01, Nocil Colony, Talavali Gaon, Navi Mumbai - 400 701</p>
+            <p class="text-sm font-bold">Mob: 9920716891 / 9004909145 / 9967344746</p>
+            <div class="bg-gray-200 inline-block px-4 py-1 mt-2 font-bold text-lg rounded">SERVICE CARD</div>
+        </div>
+        <table class="w-full text-left text-lg">
+            <tr><td class="py-2 w-1/3 font-bold">Customer Name:</td><td class="border-b border-black" id="inv-name"></td></tr>
+            <tr><td class="py-2 font-bold">Address:</td><td class="border-b border-black" id="inv-address"></td></tr>
+            <tr><td class="py-2 font-bold">Contact No:</td><td class="border-b border-black" id="inv-phone"></td></tr>
+            <tr><td class="py-2 font-bold">Contract Date:</td><td class="border-b border-black"><span id="inv-start"></span> TO <span id="inv-end"></span></td></tr>
+            <tr><td class="py-2 font-bold">Unit:</td><td class="border-b border-black" id="inv-unit"></td></tr>
+            <tr><td class="py-2 font-bold">Amount:</td><td class="border-b border-black">Rs. <span id="inv-amount"></span>/-</td></tr>
+            <tr><td class="py-2 font-bold">Bill No:</td><td class="border-b border-black" id="inv-bill"></td></tr>
+        </table>
+        <div class="mt-20 flex justify-between font-bold text-lg">
+            <p>Customer Sign.</p>
+            <p>Om Water Solution</p>
+        </div>
+    </div>
+
+    <!-- Logic Script -->
+    <script type="module" src="js/dashboard.js"></script>
+</body>
+</html>

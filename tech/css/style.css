@@ -1,0 +1,74 @@
+/* tech/css/style.css */
+
+/* --- 1. Base App Settings (Native Mobile Feel) --- */
+/* Removes the default blue highlight on mobile taps */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Hide scrollbar for a clean native app look */
+::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
+}
+body {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+}
+
+/* --- 2. Custom Numpad & PIN Dots --- */
+.numpad-btn {
+    user-select: none;
+    touch-action: manipulation; /* Faster tap response */
+}
+
+/* Smooth transition for PIN dots */
+.pin-dot {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Filled state when user types a number */
+.pin-dot.filled {
+    background-color: #111827; /* Dark charcoal */
+    border-color: #111827;
+    transform: scale(1.15); /* Subtle pop effect */
+}
+
+/* --- 3. Premium Animations --- */
+/* Organic shake effect for incorrect PIN */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    15% { transform: translateX(-6px) rotate(-1deg); }
+    30% { transform: translateX(5px) rotate(1deg); }
+    45% { transform: translateX(-4px) rotate(-1deg); }
+    60% { transform: translateX(3px) rotate(1deg); }
+    75% { transform: translateX(-2px); }
+}
+
+.animate-shake {
+    animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+/* Smooth Fade-In-Up for dashboard elements and modals */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Apple iOS style frosted glass effect for navbars */
+.glass-effect {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+}

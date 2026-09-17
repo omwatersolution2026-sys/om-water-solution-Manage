@@ -1,197 +1,128 @@
-/**
- * ==========================================
- * ADMIN DASHBOARD CONTROLLER (PREMIUM)
- * ==========================================
- * Handle logic for Data Fetching, Modal Animations, and Form Submissions.
- */
+import { getDocs, collection } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+import { db } from "./firebase-config.js";
 
-import { addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
-import { customersCol } from "./firebase-config.js";
+document.addEventListener('DOMContentLoaded', async () => {
 
-document.addEventListener('DOMContentLoaded', () => {
+    // Simple security check: agar login se nahi aaya toh bhej do wapas (optional but good practice)
+    if(sessionStorage.getItem('adminAuth') !== 'true') {
+        window.location.replace('index.html');
+    }
 
-    // --- 1. DOM Elements ---
-    const logoutBtn = document.getElementById('logout-btn');
-    const currentDateEl = document.getElementById('current-date');
+    const tableBody = document.getElementById('master-table-body');
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    let masterData = [];
+
+    // Helper functions for dates
+    const getTodayStr = () => new Date().toISOString().split('T')[0];
     
-    // Stats Elements
-    const totalRevenueEl = document.getElementById('total-revenue');
-    const totalAmcsEl = document.getElementById('total-amcs');
-    const dueServicesCountEl = document.getElementById('due-services-count');
-    const customersListEl = document.getElementById('customers-list');
-    
-    // Modal Elements
-    const addCxModal = document.getElementById('add-cx-modal');
-    const modalContent = document.getElementById('modal-content');
-    const openAddCxBtn = document.getElementById('open-add-cx-btn');
-    const closeModalBtn = document.getElementById('close-modal-btn');
-    
-    // Form Elements
-    const addCxForm = document.getElementById('add-cx-form');
-    const saveCxBtn = document.getElementById('save-cx-btn');
-
-    // --- 2. Initialize Dashboard ---
-    const initDashboard = () => {
-        // Set Today's Date with elegant formatting
-        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        currentDateEl.textContent = new Date().toLocaleDateString('en-IN', options);
-
-        // Fetch Data from Firebase
-        fetchDashboardData();
-    };
-
-    // --- 3. iOS Style Modal Animations ---
-    const openModal = () => {
-        addCxModal.classList.remove('hidden');
-        addCxModal.classList.add('flex');
+    const getStatusInfo = (serviceDate) => {
+        if (!serviceDate) return { text: 'No Data', class: 'bg-slate-100 text-slate-600', category: 'unknown' };
         
-        // Micro-delay ensures the display:flex applies before animation triggers
-        setTimeout(() => {
-            addCxModal.classList.remove('opacity-0');
-            modalContent.classList.remove('translate-y-full');
-        }, 10);
+        const today = getTodayStr();
+        if (serviceDate < today) return { text: 'Overdue / Missed', class: 'bg-red-100 text-red-700', category: 'missed' };
+        if (serviceDate === today) return { text: 'Due Today', class: 'bg-orange-100 text-orange-700', category: 'today' };
+        return { text: 'Upcoming', class: 'bg-green-100 text-green-700', category: 'upcoming' };
     };
 
-    const closeModal = () => {
-        addCxModal.classList.add('opacity-0');
-        modalContent.classList.add('translate-y-full');
-        
-        // Wait for animation to finish before hiding completely
-        setTimeout(() => {
-            addCxModal.classList.add('hidden');
-            addCxModal.classList.remove('flex');
-            addCxForm.reset(); // Clear form on close
-        }, 300);
-    };
-
-    openAddCxBtn.addEventListener('click', openModal);
-    closeModalBtn.addEventListener('click', closeModal);
-    
-    // Close modal if user clicks on the dark overlay (outside the white box)
-    addCxModal.addEventListener('click', (e) => {
-        if (e.target === addCxModal) closeModal();
-    });
-
-    // --- 4. Fetch & Calculate Data from Firebase ---
-    const fetchDashboardData = async () => {
+    // Fetch and process data
+    const fetchMasterData = async () => {
         try {
-            // Fetch customers ordered by creation date (newest first)
-            const q = query(customersCol, orderBy("createdAt", "desc"));
-            const querySnapshot = await getDocs(q);
+            const querySnapshot = await getDocs(collection(db, "customers"));
+            masterData = [];
             
-            let totalRevenue = 0;
-            let totalAmcs = 0;
-            let dueServices = 0;
-            let customersHTML = '';
-
-            const today = new Date();
+            let counts = { total: 0, today: 0, missed: 0, upcoming: 0 };
 
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
-                totalAmcs++;
-                totalRevenue += Number(data.amount || 0);
-
-                // --- Quarterly Service Logic (Premium Feature) ---
-                // Check if 3 months have passed since start date for service alert
-                if (data.startDate) {
-                    const startDt = new Date(data.startDate);
-                    const diffTime = Math.abs(today - startDt);
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                if(data.status === "Active") { // Only count active AMC customers
+                    counts.total++;
+                    const statusObj = getStatusInfo(data.nextServiceDate);
                     
-                    // If around 90 days (1 quarter) or 180 days (half year) have passed
-                    if (diffDays > 0 && (diffDays % 90 === 0 || diffDays % 90 <= 5)) {
-                        dueServices++;
-                    }
-                }
+                    if(statusObj.category === 'missed') counts.missed++;
+                    if(statusObj.category === 'today') counts.today++;
+                    if(statusObj.category === 'upcoming') counts.upcoming++;
 
-                // Build HTML for Recent Customers List (Only showing top 5 for clean UI)
-                if (totalAmcs <= 5) {
-                    customersHTML += `
-                        <div class="p-5 flex justify-between items-center hover:bg-gray-50 transition-colors">
-                            <div>
-                                <h4 class="font-semibold text-sm text-gray-900">${data.name}</h4>
-                                <p class="text-[11px] text-gray-500 mt-0.5">${data.unitType} • Bill: ${data.billNo}</p>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-sm font-bold text-gray-900">₹${Number(data.amount).toLocaleString('en-IN')}</span>
-                                <p class="text-[10px] text-green-600 font-medium mt-0.5">Active</p>
-                            </div>
-                        </div>
-                    `;
+                    masterData.push({ id: doc.id, ...data, statusObj });
                 }
             });
 
-            // Update UI with calculated data
-            totalRevenueEl.textContent = totalRevenue.toLocaleString('en-IN');
-            totalAmcsEl.textContent = totalAmcs;
-            dueServicesCountEl.textContent = dueServices;
+            // Update Stats UI
+            document.getElementById('stat-total').textContent = counts.total;
+            document.getElementById('stat-today').textContent = counts.today;
+            document.getElementById('stat-missed').textContent = counts.missed;
+            document.getElementById('stat-upcoming').textContent = counts.upcoming;
 
-            // Update List UI
-            if (totalAmcs === 0) {
-                customersListEl.innerHTML = `
-                    <div class="p-6 text-center text-gray-400">
-                        <p class="text-sm">No customers found. Add your first AMC!</p>
-                    </div>`;
-            } else {
-                customersListEl.innerHTML = customersHTML;
+            // Notification Bell logic (Red dot if any missed or today services)
+            if(counts.missed > 0 || counts.today > 0) {
+                document.getElementById('bell-badge').classList.remove('hidden');
             }
 
+            renderTable('all');
+
         } catch (error) {
-            console.error("Error fetching data: ", error);
-            customersListEl.innerHTML = `<div class="p-5 text-center text-red-500 text-sm">Error loading data. Check internet connection.</div>`;
+            console.error("Error fetching admin data:", error);
+            tableBody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-red-500">Failed to load data. Check console.</td></tr>`;
         }
     };
 
-    // --- 5. Add New Customer (Form Submission) ---
-    addCxForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+    // Render Table based on filter
+    const renderTable = (filterCat) => {
+        let html = '';
+        const filteredData = filterCat === 'all' 
+            ? masterData 
+            : masterData.filter(item => item.statusObj.category === filterCat);
 
-        // Original Button UI state
-        const originalBtnHTML = saveCxBtn.innerHTML;
-        saveCxBtn.innerHTML = `<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div><span>Saving...</span>`;
-        saveCxBtn.disabled = true;
+        if(filteredData.length === 0) {
+            html = `<tr><td colspan="4" class="p-8 text-center text-slate-400">No records found for this category.</td></tr>`;
+        } else {
+            // Sort dates so oldest dates (missed) show first
+            filteredData.sort((a, b) => new Date(a.nextServiceDate) - new Date(b.nextServiceDate));
 
-        try {
-            // Gather Form Data
-            const newCustomerData = {
-                name: document.getElementById('cx-name').value,
-                address: document.getElementById('cx-address').value,
-                phone: document.getElementById('cx-phone').value,
-                unitType: document.getElementById('cx-unit').value,
-                startDate: document.getElementById('cx-start-date').value,
-                endDate: document.getElementById('cx-end-date').value,
-                amount: Number(document.getElementById('cx-amount').value),
-                billNo: document.getElementById('cx-bill').value,
-                createdAt: serverTimestamp(),
-                status: "Active"
-            };
-
-            // Save to Firebase Firestore
-            await addDoc(customersCol, newCustomerData);
-
-            // Reset UI & Update Dashboard
-            closeModal();
-            fetchDashboardData(); // Refresh the list instantly
-
-            // Haptic Feedback for success (Mobile)
-            if (navigator.vibrate) navigator.vibrate([100]);
-
-        } catch (error) {
-            console.error("Error adding document: ", error);
-            alert("Failed to save data. Please try again.");
-        } finally {
-            // Restore Button UI
-            saveCxBtn.innerHTML = originalBtnHTML;
-            saveCxBtn.disabled = false;
+            filteredData.forEach(item => {
+                html += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-4">
+                            <p class="font-bold text-slate-800">${item.name}</p>
+                            <p class="text-xs text-slate-500 mt-1">📞 ${item.phone}</p>
+                        </td>
+                        <td class="p-4 text-sm text-slate-600">
+                            ${item.unitType || 'RO Service'}
+                        </td>
+                        <td class="p-4">
+                            <span class="font-semibold text-slate-700">${new Date(item.nextServiceDate).toLocaleDateString('en-IN')}</span>
+                        </td>
+                        <td class="p-4">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold ${item.statusObj.class}">${item.statusObj.text}</span>
+                        </td>
+                    </tr>
+                `;
+            });
         }
+        tableBody.innerHTML = html;
+    };
+
+    // Filter Button Click Events
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            // Reset active classes
+            filterBtns.forEach(b => {
+                b.classList.remove('active', 'bg-white', 'shadow', 'text-slate-800');
+                b.classList.add('text-slate-500');
+            });
+            // Set clicked button active
+            e.target.classList.add('active', 'bg-white', 'shadow', 'text-slate-800');
+            e.target.classList.remove('text-slate-500');
+
+            renderTable(e.target.dataset.filter);
+        });
     });
 
-    // --- 6. Logout Logic ---
-    logoutBtn.addEventListener('click', () => {
-        sessionStorage.removeItem('isAdminLoggedIn');
-        window.location.replace('index.html'); // Redirect to login
+    // Logout
+    document.getElementById('logout-btn').addEventListener('click', () => {
+        sessionStorage.removeItem('adminAuth');
+        window.location.replace('index.html');
     });
 
-    // Boot up the dashboard
-    initDashboard();
+    // Boot up
+    fetchMasterData();
 });

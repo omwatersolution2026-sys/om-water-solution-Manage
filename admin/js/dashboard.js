@@ -3,9 +3,10 @@ import { db } from "./firebase-config.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
 
-    // Simple security check: agar login se nahi aaya toh bhej do wapas (optional but good practice)
+    // 👉 YAHAN BHI 'adminAuth' CHECK HO RAHA HAI
     if(sessionStorage.getItem('adminAuth') !== 'true') {
         window.location.replace('index.html');
+        return; // Add return to stop execution if not logged in
     }
 
     const tableBody = document.getElementById('master-table-body');
@@ -34,7 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
-                if(data.status === "Active") { // Only count active AMC customers
+                if(data.status === "Active") { 
                     counts.total++;
                     const statusObj = getStatusInfo(data.nextServiceDate);
                     
@@ -52,7 +53,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('stat-missed').textContent = counts.missed;
             document.getElementById('stat-upcoming').textContent = counts.upcoming;
 
-            // Notification Bell logic (Red dot if any missed or today services)
             if(counts.missed > 0 || counts.today > 0) {
                 document.getElementById('bell-badge').classList.remove('hidden');
             }
@@ -61,12 +61,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         } catch (error) {
             console.error("Error fetching admin data:", error);
-            tableBody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-red-500">Failed to load data. Check console.</td></tr>`;
+            if(tableBody) tableBody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-red-500">Failed to load data. Check console.</td></tr>`;
         }
     };
 
     // Render Table based on filter
     const renderTable = (filterCat) => {
+        if(!tableBody) return;
         let html = '';
         const filteredData = filterCat === 'all' 
             ? masterData 
@@ -75,7 +76,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if(filteredData.length === 0) {
             html = `<tr><td colspan="4" class="p-8 text-center text-slate-400">No records found for this category.</td></tr>`;
         } else {
-            // Sort dates so oldest dates (missed) show first
             filteredData.sort((a, b) => new Date(a.nextServiceDate) - new Date(b.nextServiceDate));
 
             filteredData.forEach(item => {
@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             ${item.unitType || 'RO Service'}
                         </td>
                         <td class="p-4">
-                            <span class="font-semibold text-slate-700">${new Date(item.nextServiceDate).toLocaleDateString('en-IN')}</span>
+                            <span class="font-semibold text-slate-700">${item.nextServiceDate ? new Date(item.nextServiceDate).toLocaleDateString('en-IN') : '-'}</span>
                         </td>
                         <td class="p-4">
                             <span class="px-3 py-1 rounded-full text-xs font-bold ${item.statusObj.class}">${item.statusObj.text}</span>
@@ -104,12 +104,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Filter Button Click Events
     filterBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
-            // Reset active classes
             filterBtns.forEach(b => {
                 b.classList.remove('active', 'bg-white', 'shadow', 'text-slate-800');
                 b.classList.add('text-slate-500');
             });
-            // Set clicked button active
             e.target.classList.add('active', 'bg-white', 'shadow', 'text-slate-800');
             e.target.classList.remove('text-slate-500');
 
@@ -118,10 +116,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Logout
-    document.getElementById('logout-btn').addEventListener('click', () => {
-        sessionStorage.removeItem('adminAuth');
-        window.location.replace('index.html');
-    });
+    const logoutBtn = document.getElementById('logout-btn');
+    if(logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            sessionStorage.removeItem('adminAuth'); // Yahan bhi correct key remove karni hai
+            window.location.replace('index.html');
+        });
+    }
 
     // Boot up
     fetchMasterData();

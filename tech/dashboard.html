@@ -2,172 +2,129 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tech Dashboard | Om Water Solution</title>
-    
-    <!-- Security: Only Tech Session Allowed -->
-    <script>
-        if (!sessionStorage.getItem('isTechLoggedIn')) {
-            window.location.replace('index.html');
-        }
-    </script>
-
-    <!-- Typography -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Tailwind CSS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tech Portal | Om Water Solution</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="css/style.css">
-    
-    <!-- PDF Generation Library (No Backend Required) -->
+    <!-- PDF Generation Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
-    <!-- Tailwind Config -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: {
-                        dark: '#111827',
-                        light: '#ffffff',
-                        muted: '#f9fafb',
-                        borderGrey: '#e5e7eb',
-                        iosGreen: '#34C759', /* Apple Success Green */
-                        iosBlue: '#007AFF'
-                    }
-                }
-            }
-        }
-    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style> body { font-family: 'Inter', sans-serif; } </style>
 </head>
-<body class="bg-muted text-dark antialiased pb-24">
+<body class="bg-gray-50 text-gray-800">
 
-    <!-- Minimal Glassmorphism Navbar -->
-    <nav class="glass-effect sticky top-0 z-40 px-4 sm:px-6 py-4">
-        <div class="max-w-4xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-dark rounded-xl flex items-center justify-center text-white shadow-sm">
-                    <!-- Tools / Tech Icon -->
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                </div>
-                <div>
-                    <h1 class="font-semibold text-lg leading-tight tracking-tight">Om Water</h1>
-                    <p class="text-[10px] text-gray-500 font-medium tracking-widest uppercase">Engineer Access</p>
-                </div>
-            </div>
-            <button id="logout-btn" class="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-dark transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-            </button>
+    <!-- Navbar -->
+    <nav class="bg-blue-600 text-white px-4 py-3 flex justify-between items-center shadow-md">
+        <div>
+            <h1 class="font-bold text-lg">Tech Portal</h1>
+            <p class="text-xs text-blue-100">Field Service & Billing</p>
         </div>
+        <button id="logout-btn" class="text-sm bg-white/20 px-3 py-1.5 rounded-lg font-medium">Logout</button>
     </nav>
 
-    <!-- Main Content Area -->
-    <main class="max-w-4xl mx-auto px-4 mt-6 space-y-6 fade-in-up">
+    <div class="p-4 max-w-lg mx-auto">
+        <h2 class="text-lg font-bold mb-4">Today's Service Tasks</h2>
+        
+        <!-- Task List -->
+        <div id="task-list" class="space-y-3">
+            <div class="text-center text-gray-400 py-10 text-sm">Loading tasks...</div>
+        </div>
+    </div>
 
-        <!-- Header & Stats -->
-        <div class="flex justify-between items-end">
+    <!-- Service Completion Form Modal -->
+    <div id="service-modal" class="fixed inset-0 bg-black/50 hidden items-end sm:items-center justify-center z-50 transition-opacity">
+        <div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-5 shadow-xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">Complete Service</h3>
+                <button id="close-modal" class="text-gray-400 text-2xl leading-none">&times;</button>
+            </div>
+            
+            <form id="service-form" class="space-y-4">
+                <input type="hidden" id="cust-id">
+                <input type="hidden" id="cust-name">
+                <input type="hidden" id="cust-phone">
+                
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Parts Replaced / Serviced</label>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <label class="flex items-center gap-2"><input type="checkbox" value="Sediment Filter" class="part-check"> Sediment Filter</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" value="Carbon Filter" class="part-check"> Carbon Filter</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" value="RO Membrane" class="part-check"> RO Membrane</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" value="General Service" class="part-check"> General Service</label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Total Amount (₹)</label>
+                    <input type="number" id="service-amount" required class="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. 500">
+                </div>
+
+                <button type="submit" id="generate-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md">Complete & Generate Bill</button>
+            </form>
+
+            <!-- WhatsApp Share Button (Hidden by default) -->
+            <div id="whatsapp-container" class="mt-4 hidden">
+                <p class="text-xs text-center text-green-600 mb-2 font-bold">Bill Generated Successfully!</p>
+                <a id="whatsapp-btn" href="#" target="_blank" class="block w-full bg-green-500 text-white text-center font-bold py-3 rounded-xl shadow-md flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 0C5.385 0 0 5.385 0 12.032c0 2.651.861 5.122 2.373 7.181L.068 24l4.946-2.296A11.968 11.968 0 0012.031 24c6.645 0 12.03-5.385 12.03-12.032C24.062 5.385 18.677 0 12.031 0zm0 21.996c-2.228 0-4.341-.577-6.177-1.583l-.443-.263-3.66 1.7 1.734-3.567-.289-.46A9.972 9.972 0 012.006 12.03c0-5.523 4.492-10.016 10.025-10.016 5.522 0 10.015 4.492 10.015 10.016 0 5.524-4.493 10.017-10.015 10.017zm5.53-7.534c-.303-.152-1.796-.888-2.073-.99-.278-.101-.48-.152-.682.152-.202.303-.784.99-.96 1.192-.177.202-.354.228-.657.076-1.425-.724-2.528-1.76-3.486-3.14-.204-.294.04-.424.32-.71.092-.094.204-.242.306-.364.102-.122.136-.202.204-.344.068-.142.034-.263-.017-.364-.05-.101-.682-1.648-.934-2.257-.245-.592-.494-.51-.682-.52-.177-.008-.38-.01-.582-.01-.202 0-.53.076-.808.38-.278.303-1.062 1.04-1.062 2.535 0 1.495 1.087 2.938 1.238 3.14.152.202 2.144 3.27 5.19 4.512 1.767.72 2.457.818 3.303.685.958-.15 2.106-.864 2.404-1.696.298-.832.298-1.545.202-1.696-.096-.152-.349-.228-.652-.38z"/></svg>
+                    Send to WhatsApp
+                </a>
+                <button onclick="location.reload()" class="w-full mt-2 text-sm text-gray-500 py-2">Close & Refresh</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= INVOICE TEMPLATE (HIDDEN FOR PDF ONLY) ================= -->
+    <div id="invoice-template" class="absolute -left-[9999px] top-0 bg-white w-[800px] p-10 text-black">
+        <!-- Header Section -->
+        <div class="border-b-2 border-gray-800 pb-4 mb-6 flex justify-between items-center">
             <div>
-                <h2 class="text-2xl font-bold tracking-tight">Today's Tasks</h2>
-                <p id="current-date" class="text-sm text-gray-500 font-medium mt-1">Loading date...</p>
+                <h1 class="text-3xl font-black text-blue-800 uppercase tracking-wide">Om Water Solution</h1>
+                <p class="text-sm mt-1">Talvali, Talavali gaon, Ghansoli,<br>Navi Mumbai, Maharashtra 400701</p>
+                <p class="text-sm font-bold mt-1">Mobile: +91 99207 16891</p>
             </div>
             <div class="text-right">
-                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Pending</p>
-                <p class="text-xl font-bold text-dark" id="pending-tasks">0</p>
+                <h2 class="text-2xl font-bold text-gray-400 uppercase">Service Invoice</h2>
+                <p class="text-sm mt-1">Date: <span id="inv-date"></span></p>
+                <p class="text-sm font-bold">Bill No: OWS-<span id="inv-no"></span></p>
             </div>
         </div>
-
-        <!-- Dynamic Task List -->
-        <div id="tasks-list" class="space-y-4">
-            <!-- Skeleton Loader -->
-            <div class="bg-light p-5 rounded-2xl border border-borderGrey shadow-[0_2px_10px_rgb(0,0,0,0.02)] animate-pulse">
-                <div class="h-4 w-32 bg-gray-200 rounded mb-3"></div>
-                <div class="h-3 w-48 bg-gray-100 rounded mb-2"></div>
-                <div class="h-3 w-40 bg-gray-100 rounded"></div>
-                <div class="flex gap-2 mt-4 pt-4 border-t border-gray-50">
-                    <div class="h-10 flex-1 bg-gray-100 rounded-xl"></div>
-                    <div class="h-10 flex-1 bg-gray-100 rounded-xl"></div>
-                </div>
-            </div>
+        
+        <!-- Customer Details -->
+        <div class="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <p class="text-sm font-bold text-gray-500 uppercase mb-1">Billed To:</p>
+            <h3 class="text-lg font-bold" id="inv-cust-name">Customer Name</h3>
+            <p class="text-sm" id="inv-cust-phone">Phone: -</p>
         </div>
 
-    </main>
-
-    <!-- Floating Action Button (Global Access Add Customer) -->
-    <div class="fixed bottom-6 left-0 right-0 px-4 max-w-4xl mx-auto z-40">
-        <button id="open-add-cx-btn" class="w-full bg-dark text-white font-medium py-4 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:bg-black active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-            Add New Entry On-Site
-        </button>
-    </div>
-
-    <!-- ADD NEW CUSTOMER MODAL (Same as Admin for consistency) -->
-    <div id="add-cx-modal" class="fixed inset-0 bg-dark/40 backdrop-blur-sm z-50 hidden flex-col justify-end transition-opacity duration-300 opacity-0">
-        <div id="modal-content" class="bg-white w-full max-w-4xl mx-auto rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl transform translate-y-full transition-transform duration-300">
-            <div class="w-full flex justify-center pt-3 pb-1"><div class="w-12 h-1.5 bg-gray-200 rounded-full"></div></div>
-            <div class="flex justify-between items-center px-6 py-4 border-b border-gray-100">
-                <h3 class="text-lg font-semibold tracking-tight">New Field Entry</h3>
-                <button id="close-modal-btn" class="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full text-gray-500 active:bg-gray-200 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-            </div>
-            <div class="p-6 overflow-y-auto custom-scrollbar">
-                <form id="add-cx-form" class="space-y-5">
-                    <div>
-                        <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Customer Name</label>
-                        <input type="text" id="cx-name" required class="w-full px-4 py-3.5 bg-muted border border-borderGrey rounded-xl focus:border-dark focus:bg-white text-sm font-medium" placeholder="e.g. Agarwal Sir">
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Full Address</label>
-                        <textarea id="cx-address" required rows="2" class="w-full px-4 py-3 bg-muted border border-borderGrey rounded-xl focus:border-dark focus:bg-white text-sm" placeholder="Location..."></textarea>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Contact No.</label>
-                            <input type="tel" id="cx-phone" required pattern="[0-9]{10}" class="w-full px-4 py-3.5 bg-muted border border-borderGrey rounded-xl focus:border-dark focus:bg-white text-sm" placeholder="9876543210">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Unit Model</label>
-                            <input type="text" id="cx-unit" required class="w-full px-4 py-3.5 bg-muted border border-borderGrey rounded-xl focus:border-dark focus:bg-white text-sm" placeholder="e.g. Compact">
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div><label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Start Date</label><input type="date" id="cx-start-date" required class="w-full px-4 py-3.5 bg-muted border border-borderGrey rounded-xl focus:border-dark focus:bg-white text-sm"></div>
-                        <div><label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">End Date</label><input type="date" id="cx-end-date" required class="w-full px-4 py-3.5 bg-muted border border-borderGrey rounded-xl focus:border-dark focus:bg-white text-sm"></div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4 pt-2">
-                        <div><label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Amount (₹)</label><input type="number" id="cx-amount" required class="w-full px-4 py-3.5 bg-muted border border-borderGrey rounded-xl focus:border-dark focus:bg-white text-sm font-semibold" placeholder="1800"></div>
-                        <div><label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Bill No.</label><input type="text" id="cx-bill" class="w-full px-4 py-3.5 bg-muted border border-borderGrey rounded-xl focus:border-dark focus:bg-white text-sm"></div>
-                    </div>
-                    <div class="pt-4 pb-8"><button type="submit" id="save-cx-btn" class="w-full bg-iosBlue text-white font-medium py-4 rounded-xl shadow-sm hover:bg-blue-600 transition-colors flex justify-center items-center">Save & Sync</button></div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Hidden Printable Invoice Template (For PDF Generation) -->
-    <div id="invoice-template" class="hidden bg-white p-8 absolute top-[-9999px] left-[-9999px] w-[800px] border">
-        <!-- Exact match of your physical Service Card logic -->
-        <div class="text-center border-b-2 border-red-600 pb-4 mb-4">
-            <h1 class="text-3xl font-bold text-red-700">Om Water Solution</h1>
-            <p class="text-sm">H. No: 1432/01, Nocil Colony, Talavali Gaon, Navi Mumbai - 400 701</p>
-            <p class="text-sm font-bold">Mob: 9920716891 / 9004909145 / 9967344746</p>
-            <div class="bg-gray-200 inline-block px-4 py-1 mt-2 font-bold text-lg rounded">SERVICE CARD</div>
-        </div>
-        <table class="w-full text-left text-lg">
-            <tr><td class="py-2 w-1/3 font-bold">Customer Name:</td><td class="border-b border-black" id="inv-name"></td></tr>
-            <tr><td class="py-2 font-bold">Address:</td><td class="border-b border-black" id="inv-address"></td></tr>
-            <tr><td class="py-2 font-bold">Contact No:</td><td class="border-b border-black" id="inv-phone"></td></tr>
-            <tr><td class="py-2 font-bold">Contract Date:</td><td class="border-b border-black"><span id="inv-start"></span> TO <span id="inv-end"></span></td></tr>
-            <tr><td class="py-2 font-bold">Unit:</td><td class="border-b border-black" id="inv-unit"></td></tr>
-            <tr><td class="py-2 font-bold">Amount:</td><td class="border-b border-black">Rs. <span id="inv-amount"></span>/-</td></tr>
-            <tr><td class="py-2 font-bold">Bill No:</td><td class="border-b border-black" id="inv-bill"></td></tr>
+        <!-- Service Table -->
+        <table class="w-full mb-8 border-collapse">
+            <thead>
+                <tr class="bg-blue-800 text-white text-left">
+                    <th class="p-3 text-sm font-bold">Description (Parts / Service)</th>
+                    <th class="p-3 text-sm font-bold text-right">Amount (₹)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="border-b border-gray-200">
+                    <td class="p-3" id="inv-parts">General Service</td>
+                    <td class="p-3 text-right font-bold" id="inv-amount">0.00</td>
+                </tr>
+            </tbody>
         </table>
-        <div class="mt-20 flex justify-between font-bold text-lg">
-            <p>Customer Sign.</p>
-            <p>Om Water Solution</p>
+
+        <!-- Footer -->
+        <div class="flex justify-between items-end mt-10">
+            <div class="text-xs text-gray-500">
+                <p>* Thank you for your business.</p>
+                <p>* System generated invoice, no signature required.</p>
+            </div>
+            <div class="text-right">
+                <p class="text-sm text-gray-500">Authorized Signatory</p>
+                <p class="font-bold text-lg mt-4 border-t border-gray-300 pt-2">Om Water Solution</p>
+            </div>
         </div>
     </div>
 
-    <!-- Logic Script -->
     <script type="module" src="js/dashboard.js"></script>
 </body>
 </html>

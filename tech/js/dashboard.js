@@ -15,17 +15,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tasksListEl = document.getElementById('tech-tasks-list');
     const logoutBtn = document.getElementById('logout-btn');
 
-    // Modal elements
+    // Service Modal elements
     const serviceModal = document.getElementById('service-modal');
     const closeServiceModalBtn = document.getElementById('close-service-modal');
     const serviceForm = document.getElementById('service-update-form');
+
+    // Tech Add Customer Modal elements
+    const techAddModal = document.getElementById('tech-add-cx-modal');
+    const openTechAddBtn = document.getElementById('open-tech-add-cx');
+    const closeTechAddBtn = document.getElementById('close-tech-add-cx');
+    const techAddForm = document.getElementById('tech-add-cx-form');
     
     let activeCustomer = null;
 
+    // Modal toggles for Service Complete
     if(closeServiceModalBtn) {
         closeServiceModalBtn.addEventListener('click', () => {
             serviceModal.classList.add('hidden');
             serviceModal.classList.remove('flex');
+        });
+    }
+
+    // Modal toggles for Tech Adding New Customer
+    if(openTechAddBtn) {
+        openTechAddBtn.addEventListener('click', () => {
+            techAddModal.classList.remove('hidden');
+            techAddModal.classList.add('flex');
+        });
+    }
+    if(closeTechAddBtn) {
+        closeTechAddBtn.addEventListener('click', () => {
+            techAddModal.classList.add('hidden');
+            techAddModal.classList.remove('flex');
         });
     }
 
@@ -35,8 +56,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const snapshot = await getDocs(collection(db, "customers"));
             let tasksHtml = '';
             let count = 0;
-
-            const todayStr = new Date().toISOString().split('T')[0];
 
             snapshot.forEach((docSnap) => {
                 const data = docSnap.data();
@@ -66,7 +85,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             if(count === 0) {
-                tasksListEl.innerHTML = `<div class="p-8 text-center text-slate-400">No pending tasks found.</div>`;
+                tasksListEl.innerHTML = `<div class="p-8 text-center text-slate-400">No customer records found.</div>`;
             } else {
                 tasksListEl.innerHTML = tasksHtml;
             }
@@ -76,6 +95,49 @@ document.addEventListener('DOMContentLoaded', async () => {
             tasksListEl.innerHTML = `<div class="p-8 text-center text-red-500">Failed to load tasks.</div>`;
         }
     };
+
+    // Save New Customer from Tech Portal
+    if(techAddForm) {
+        techAddForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('tech-save-cx-btn');
+            btn.textContent = "Saving Record...";
+            btn.disabled = true;
+
+            try {
+                const name = document.getElementById('tech-cx-name').value;
+                const phone = document.getElementById('tech-cx-phone').value;
+                const address = document.getElementById('tech-cx-address').value;
+                const unitType = document.getElementById('tech-cx-unit').value;
+                const startDate = document.getElementById('tech-cx-start-date').value;
+                const endDate = document.getElementById('tech-cx-end-date').value;
+                const amount = Number(document.getElementById('tech-cx-amount').value);
+                const billNo = document.getElementById('tech-cx-bill').value;
+
+                const startDt = new Date(startDate || Date.now());
+                startDt.setMonth(startDt.getMonth() + 3);
+                const nextServiceDate = startDt.toISOString().split('T')[0];
+
+                await addDoc(collection(db, "customers"), {
+                    name, phone, address, unitType, startDate, endDate, nextServiceDate, amount, billNo,
+                    status: "Active",
+                    createdAt: serverTimestamp()
+                });
+
+                techAddModal.classList.add('hidden');
+                techAddModal.classList.remove('flex');
+                techAddForm.reset();
+                fetchTechTasks();
+                alert("New customer service card added successfully!");
+            } catch (err) {
+                console.error(err);
+                alert("Failed to save customer record.");
+            } finally {
+                btn.textContent = "Save Service Card Record";
+                btn.disabled = false;
+            }
+        });
+    }
 
     // Open Service Modal
     window.openServiceModal = (cx) => {
@@ -133,10 +195,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const { jsPDF } = window.jspdf;
             const docPdf = new jsPDF();
 
-            // PDF Styling
             docPdf.setFont("helvetica", "bold");
             docPdf.setFontSize(18);
-            docPdf.setTextColor(37, 99, 235); // Blue
+            docPdf.setTextColor(37, 99, 235);
             docPdf.text("OM WATER SOLUTION", 105, 20, { align: "center" });
 
             docPdf.setFontSize(10);
@@ -160,7 +221,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             docPdf.text(`Engineer: ${engineer}`, 130, 68);
             docPdf.text(`Unit: ${activeCustomer.unitType || 'Compact'}`, 130, 76);
 
-            // Table Header Box
             docPdf.setFillColor(240, 240, 240);
             docPdf.rect(20, 90, 170, 10, "F");
             docPdf.setFont("helvetica", "bold");
@@ -180,11 +240,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             docPdf.text("Customer Signature", 140, 175);
             docPdf.text("For Om Water Solution", 25, 175);
 
-            // Output PDF as Data URL & Trigger Download
             const pdfBlobUrl = docPdf.output('bloburl');
             window.open(pdfBlobUrl, '_blank');
 
-            // WhatsApp Share Prompt
             const whatsappMsg = encodeURIComponent(`Hello ${activeCustomer.name}, thank you for choosing Om Water Solution. Your service is completed successfully. Next service due on ${nextServiceDateStr}. Amount paid: Rs. ${amount}/-`);
             window.open(`https://wa.me/91${activeCustomer.phone}?text=${whatsappMsg}`, '_blank');
 

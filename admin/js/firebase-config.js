@@ -45,6 +45,5 @@ const servicesCol = collection(db, "services");
 // Collection 3: Stores all telecalling and marketing leads (For Marketing Portal)
 const leadsCol = collection(db, "leads");         
 
-
 // 6. Export everything so other files can use them securely
 export { db, customersCol, servicesCol, leadsCol };

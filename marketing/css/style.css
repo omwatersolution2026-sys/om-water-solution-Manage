@@ -1,41 +1,35 @@
 /* marketing/css/style.css */
 
-/* --- 1. Base App Settings (Native Mobile Feel) --- */
-/* Removes the default blue highlight on mobile taps */
 * {
     -webkit-tap-highlight-color: transparent;
 }
 
-/* Hide scrollbar for a clean native app look */
 ::-webkit-scrollbar {
     width: 0px;
     background: transparent;
 }
 body {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
-/* --- 2. Custom Numpad & PIN Dots --- */
 .numpad-btn {
     user-select: none;
-    touch-action: manipulation; /* Faster tap response */
+    touch-action: manipulation;
 }
 
-/* Smooth transition for PIN dots */
+/* PIN Dots Theme */
 .pin-dot {
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Filled state when user types a number (Indigo Theme for Marketing) */
 .pin-dot.filled {
-    background-color: #4F46E5; /* Vibrant Indigo */
-    border-color: #4F46E5;
-    transform: scale(1.15); /* Subtle pop effect */
+    background-color: #312e81; /* Indigo 900 for Marketing */
+    border-color: #312e81;
+    transform: scale(1.15);
 }
 
-/* --- 3. Premium Animations --- */
-/* Organic shake effect for incorrect PIN */
+/* Animations */
 @keyframes shake {
     0%, 100% { transform: translateX(0); }
     15% { transform: translateX(-6px) rotate(-1deg); }
@@ -49,26 +43,18 @@ body {
     animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
 }
 
-/* Smooth Fade-In-Up for dashboard elements */
 @keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .fade-in-up {
     animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Apple iOS style frosted glass effect for navbars */
 .glass-effect {
     background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(224, 231, 255, 0.5); /* Indigo tinted border */
+    border-bottom: 1px solid rgba(229, 231, 235, 0.5);
 }

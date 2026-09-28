@@ -1,149 +1,176 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Master Admin | Om Water Solution</title>
+import { getDocs, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+import { db } from "./firebase-config.js";
+
+document.addEventListener('DOMContentLoaded', async () => {
+
+    // --- 1. SECURE SESSION CHECK (Loop Fix) ---
+    const authStatus = sessionStorage.getItem('isAdminLoggedIn') || sessionStorage.getItem('adminAuth');
+    if (authStatus !== 'true') {
+        window.location.replace('index.html');
+        return;
+    }
+
+    const tableBody = document.getElementById('master-table-body');
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const logoutBtn = document.getElementById('logout-btn');
     
-    <!-- Security Check: Agar direct URL access kare toh login par bhejo -->
-    <script>
-        if (!sessionStorage.getItem('isAdminLoggedIn')) {
-            window.location.replace('index.html');
+    const statTotal = document.getElementById('stat-total');
+    const statToday = document.getElementById('stat-today');
+    const statMissed = document.getElementById('stat-missed');
+    const statUpcoming = document.getElementById('stat-upcoming');
+
+    const addCxModal = document.getElementById('add-cx-modal');
+    const openAddCxBtn = document.getElementById('open-add-cx-btn');
+    const closeAddCxBtn = document.getElementById('close-add-cx-modal');
+    const addCxForm = document.getElementById('add-cx-form');
+
+    let masterData = [];
+
+    // Modal Toggles
+    if(openAddCxBtn) {
+        openAddCxBtn.addEventListener('click', () => {
+            addCxModal.classList.remove('hidden');
+            addCxModal.classList.add('flex');
+        });
+    }
+
+    if(closeAddCxBtn) {
+        closeAddCxBtn.addEventListener('click', () => {
+            addCxModal.classList.add('hidden');
+            addCxModal.classList.remove('flex');
+        });
+    }
+
+    const getTodayStr = () => new Date().toISOString().split('T')[0];
+    
+    const getStatusInfo = (serviceDate) => {
+        if (!serviceDate) return { text: 'No Data', class: 'bg-gray-100 text-gray-600', category: 'unknown' };
+        const today = getTodayStr();
+        if (serviceDate < today) return { text: 'Missed', class: 'bg-red-50 text-red-600 border border-red-200', category: 'missed' };
+        if (serviceDate === today) return { text: 'Today', class: 'bg-orange-50 text-orange-600 border border-orange-200', category: 'today' };
+        return { text: 'Upcoming', class: 'bg-green-50 text-green-600 border border-green-200', category: 'upcoming' };
+    };
+
+    // Fetch Master Data
+    const fetchMasterData = async () => {
+        try {
+            const querySnapshot = await getDocs(collection(db, "customers"));
+            masterData = [];
+            let counts = { total: 0, today: 0, missed: 0, upcoming: 0 };
+
+            querySnapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                if(data.status === "Active") { 
+                    counts.total++;
+                    const statusObj = getStatusInfo(data.nextServiceDate);
+                    if(statusObj.category === 'missed') counts.missed++;
+                    if(statusObj.category === 'today') counts.today++;
+                    if(statusObj.category === 'upcoming') counts.upcoming++;
+
+                    masterData.push({ id: docSnap.id, ...data, statusObj });
+                }
+            });
+
+            statTotal.textContent = counts.total;
+            statToday.textContent = counts.today;
+            statMissed.textContent = counts.missed;
+            statUpcoming.textContent = counts.upcoming;
+
+            renderTable('all');
+        } catch (error) {
+            console.error("Error fetching data:", error);
+            tableBody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-red-500">Failed to load data.</td></tr>`;
         }
-    </script>
+    };
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <style> body { font-family: 'Inter', sans-serif; } </style>
-</head>
-<body class="bg-slate-100 text-slate-800 antialiased pb-20">
+    // Render Table
+    const renderTable = (filterCat) => {
+        let html = '';
+        const filteredData = filterCat === 'all' 
+            ? masterData 
+            : masterData.filter(item => item.statusObj.category === filterCat);
 
-    <!-- Top Navigation -->
-    <nav class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-10 shadow-sm">
-        <div class="flex items-center gap-4">
-            <div class="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center font-black text-xl shadow-inner">O</div>
-            <div>
-                <h1 class="font-bold text-xl leading-none text-slate-900">Admin Control</h1>
-                <p class="text-xs text-slate-500 font-medium">Om Water Solution</p>
-            </div>
-        </div>
-        <div class="flex items-center gap-4">
-            <!-- Notification Bell -->
-            <button class="relative p-2 text-slate-400 hover:text-slate-600 transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
-                <span id="bell-badge" class="absolute top-1 right-1 w-3 h-3 bg-red-500 border-2 border-white rounded-full hidden"></span>
-            </button>
-            <button id="logout-btn" class="text-sm font-semibold text-red-500 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg transition-colors">Logout</button>
-        </div>
-    </nav>
+        if(filteredData.length === 0) {
+            html = `<tr><td colspan="4" class="p-8 text-center text-gray-400">No records found.</td></tr>`;
+        } else {
+            filteredData.sort((a, b) => new Date(a.nextServiceDate) - new Date(b.nextServiceDate));
+            filteredData.forEach(item => {
+                const formattedDate = item.nextServiceDate ? new Date(item.nextServiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+                html += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-4">
+                            <p class="font-bold text-slate-800">${item.name}</p>
+                            <p class="text-xs text-slate-500">📞 ${item.phone} | ${item.address || ''}</p>
+                        </td>
+                        <td class="p-4 text-sm text-slate-600">${item.unitType || 'RO + UV'}</td>
+                        <td class="p-4 font-semibold text-slate-700">${formattedDate}</td>
+                        <td class="p-4"><span class="px-3 py-1 rounded-full text-xs font-bold ${item.statusObj.class}">${item.statusObj.text}</span></td>
+                    </tr>
+                `;
+            });
+        }
+        tableBody.innerHTML = html;
+    };
 
-    <div class="max-w-7xl mx-auto p-6 space-y-6">
-        
-        <!-- Action Button: Add New Customer -->
-        <button id="open-add-cx-btn" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-md hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-            + Add New Customer / AMC Record
-        </button>
+    // Save New Customer
+    if(addCxForm) {
+        addCxForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const saveBtn = document.getElementById('save-cx-btn');
+            saveBtn.textContent = "Saving...";
+            saveBtn.disabled = true;
 
-        <!-- Stats Overview Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-blue-500">
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total AMC Customers</p>
-                <h3 class="text-3xl font-black text-slate-800" id="stat-total">0</h3>
-            </div>
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-orange-400">
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Services Today</p>
-                <h3 class="text-3xl font-black text-orange-500" id="stat-today">0</h3>
-            </div>
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-red-500">
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Missed / Overdue</p>
-                <h3 class="text-3xl font-black text-red-600" id="stat-missed">0</h3>
-            </div>
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-green-500">
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Upcoming (This Month)</p>
-                <h3 class="text-3xl font-black text-green-600" id="stat-upcoming">0</h3>
-            </div>
-        </div>
+            try {
+                const name = document.getElementById('cx-name').value;
+                const phone = document.getElementById('cx-phone').value;
+                const address = document.getElementById('cx-address').value;
+                const unitType = document.getElementById('cx-unit').value;
+                const startDate = document.getElementById('cx-start-date').value;
+                const amount = Number(document.getElementById('cx-amount').value);
+                const billNo = document.getElementById('cx-bill').value;
 
-        <!-- Master Data Table -->
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <h2 class="text-lg font-bold text-slate-800">Master Service Pipeline</h2>
-                <!-- Filters -->
-                <div class="flex bg-slate-100 p-1 rounded-lg">
-                    <button class="filter-btn px-4 py-1.5 text-sm font-semibold rounded-md bg-white shadow text-slate-800" data-filter="all">All</button>
-                    <button class="filter-btn px-4 py-1.5 text-sm font-semibold rounded-md text-slate-500 hover:text-slate-800 transition-colors" data-filter="missed">Missed</button>
-                    <button class="filter-btn px-4 py-1.5 text-sm font-semibold rounded-md text-slate-500 hover:text-slate-800 transition-colors" data-filter="today">Today</button>
-                    <button class="filter-btn px-4 py-1.5 text-sm font-semibold rounded-md text-slate-500 hover:text-slate-800 transition-colors" data-filter="upcoming">Upcoming</button>
-                </div>
-            </div>
-            
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
-                            <th class="p-4 font-bold">Customer Info</th>
-                            <th class="p-4 font-bold">Unit / AMC</th>
-                            <th class="p-4 font-bold">Next Service Date</th>
-                            <th class="p-4 font-bold">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="master-table-body" class="divide-y divide-slate-100">
-                        <tr><td colspan="4" class="p-8 text-center text-slate-400">Loading master data...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+                const startDt = new Date(startDate);
+                startDt.setMonth(startDt.getMonth() + 3);
+                const nextServiceDate = startDt.toISOString().split('T')[0];
 
-    </div>
+                await addDoc(collection(db, "customers"), {
+                    name, phone, address, unitType, startDate, nextServiceDate, amount, billNo,
+                    status: "Active",
+                    createdAt: serverTimestamp()
+                });
 
-    <!-- ADD NEW CUSTOMER MODAL -->
-    <div id="add-cx-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-lg rounded-3xl max-h-[90vh] flex flex-col shadow-2xl p-6 overflow-y-auto">
-            <div class="flex justify-between items-center mb-4 border-b pb-3">
-                <h3 class="text-lg font-bold text-slate-800">New Customer Entry</h3>
-                <button id="close-add-cx-modal" class="text-gray-400 hover:text-red-500 text-2xl font-bold">&times;</button>
-            </div>
-            
-            <form id="add-cx-form" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Customer Name</label>
-                    <input type="text" id="cx-name" required class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Phone Number</label>
-                    <input type="tel" id="cx-phone" required class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Full Address</label>
-                    <textarea id="cx-address" required rows="2" class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Unit Model</label>
-                        <input type="text" id="cx-unit" value="Compact" required class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Contract Start Date</label>
-                        <input type="date" id="cx-start-date" required class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none text-sm">
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Amount (₹)</label>
-                        <input type="number" id="cx-amount" value="1800" required class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none font-bold text-blue-600">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Bill No.</label>
-                        <input type="text" id="cx-bill" placeholder="e.g. 28004" class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none">
-                    </div>
-                </div>
-                <button type="submit" id="save-cx-btn" class="w-full bg-slate-900 text-white font-bold py-4 rounded-xl shadow-lg mt-4 hover:bg-black">Save Customer Data</button>
-            </form>
-        </div>
-    </div>
+                addCxModal.classList.add('hidden');
+                addCxModal.classList.remove('flex');
+                addCxForm.reset();
+                fetchMasterData();
+            } catch (error) {
+                alert("Failed to save customer.");
+            } finally {
+                saveBtn.textContent = "Save Customer Data";
+                saveBtn.disabled = false;
+            }
+        });
+    }
 
-    <!-- Script Connection -->
-    <script type="module" src="js/dashboard.js"></script>
-</body>
-</html>
+    // Filter Buttons
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            filterBtns.forEach(b => {
+                b.classList.remove('bg-white', 'shadow', 'text-slate-800');
+                b.classList.add('text-slate-500');
+            });
+            e.target.classList.add('bg-white', 'shadow', 'text-slate-800');
+            e.target.classList.remove('text-slate-500');
+            renderTable(e.target.dataset.filter);
+        });
+    });
+
+    if(logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            sessionStorage.clear();
+            window.location.replace('index.html');
+        });
+    }
+
+    fetchMasterData();
+});

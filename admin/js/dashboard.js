@@ -1,6 +1,6 @@
 // admin/js/dashboard.js
 
-import { getDocs, getDoc, collection, addDoc, updateDoc, doc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+import { onSnapshot, collection, addDoc, updateDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 import { db } from "./firebase-config.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tableBody = document.getElementById('master-table-body');
     const filterBtns = document.querySelectorAll('.filter-btn');
     const logoutBtn = document.getElementById('logout-btn');
+    const globalSearchInput = document.getElementById('global-search-input');
+    const clearSearchBtn = document.getElementById('clear-search-btn');
 
     // Modals elements
     const addCxModal = document.getElementById('add-cx-modal');
@@ -36,6 +38,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const manualFieldsDiv = document.getElementById('manual-cx-fields');
 
     let masterData = [];
+    let currentFilter = 'all';
+    let searchQuery = '';
 
     // --- Modal Toggles ---
     openAddCxBtn.addEventListener('click', () => { addCxModal.classList.remove('hidden'); addCxModal.classList.add('flex'); });
@@ -66,6 +70,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // --- Search Bar Input Event ---
+    if(globalSearchInput) {
+        globalSearchInput.addEventListener('input', (e) => {
+            searchQuery = e.target.value.toLowerCase().trim();
+            if(searchQuery.length > 0) {
+                clearSearchBtn.classList.remove('hidden');
+            } else {
+                clearSearchBtn.classList.add('hidden');
+            }
+            renderTable(currentFilter);
+        });
+    }
+
+    if(clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', () => {
+            globalSearchInput.value = '';
+            searchQuery = '';
+            clearSearchBtn.classList.add('hidden');
+            renderTable(currentFilter);
+        });
+    }
+
     // Helper functions for dates
     const getTodayStr = () => new Date().toISOString().split('T')[0];
     
@@ -77,14 +103,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         return { text: 'Upcoming', class: 'bg-green-100 text-green-700', category: 'upcoming' };
     };
 
-    // --- Fetch Master Data ---
-    const fetchMasterData = async () => {
-        try {
-            const querySnapshot = await getDocs(collection(db, "customers"));
+    // --- Real-Time Data Sync using onSnapshot ---
+    const initRealtimeListener = () => {
+        onSnapshot(collection(db, "customers"), (snapshot) => {
             masterData = [];
             let counts = { total: 0, today: 0, missed: 0, upcoming: 0 };
 
-            querySnapshot.forEach((docSnap) => {
+            snapshot.forEach((docSnap) => {
                 const data = docSnap.data();
                 if(data.status !== "Deleted") {
                     counts.total++;
@@ -98,40 +123,53 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
 
-            // Update Stats UI
+            // Update Stats UI Live
             document.getElementById('stat-total').textContent = counts.total;
             document.getElementById('stat-today').textContent = counts.today;
             document.getElementById('stat-missed').textContent = counts.missed;
             document.getElementById('stat-upcoming').textContent = counts.upcoming;
 
-            renderTable('all');
-        } catch (error) {
-            console.error("Error fetching admin data:", error);
-            if(tableBody) tableBody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-red-500">Failed to load data.</td></tr>`;
-        }
+            renderTable(currentFilter);
+        }, (error) => {
+            console.error("Real-time sync error:", error);
+            if(tableBody) tableBody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-red-500">Failed to sync live data.</td></tr>`;
+        });
     };
 
-    // Populate Customer Dropdown for Quick Log (Includes Paper Bill Option)
+    // Populate Customer Dropdown for Quick Log
     const populateCustomerDropdown = () => {
         let optionsHtml = '<option value="">-- Choose Customer --</option>';
         optionsHtml += '<option value="NEW_MANUAL" class="font-bold text-blue-600">+ Add New (From Paper Bill)</option>';
         masterData.forEach(cx => {
-            optionsHtml += `<option value="${cx.id}">${cx.name} (${cx.phone})</option>`;
+            optionsHtml += `<option value="${cx.id}">${cx.name} (${cx.phone}) - Bill: #${cx.billNo || 'N/A'}</option>`;
         });
         quickCxSelect.innerHTML = optionsHtml;
         if(manualFieldsDiv) manualFieldsDiv.classList.add('hidden');
     };
 
-    // --- Render Table ---
+    // --- Render Table with Search and Filters ---
     const renderTable = (filterCat) => {
         if(!tableBody) return;
+        currentFilter = filterCat;
         let html = '';
-        const filteredData = filterCat === 'all' 
+
+        // Filter by category first
+        let filteredData = filterCat === 'all' 
             ? masterData 
             : masterData.filter(item => item.statusObj.category === filterCat);
 
+        // Filter by Search Query (Name, Phone, or Bill No)
+        if(searchQuery) {
+            filteredData = filteredData.filter(item => {
+                const nameMatch = item.name && item.name.toLowerCase().includes(searchQuery);
+                const phoneMatch = item.phone && item.phone.includes(searchQuery);
+                const billMatch = item.billNo && item.billNo.toLowerCase().includes(searchQuery);
+                return nameMatch || phoneMatch || billMatch;
+            });
+        }
+
         if(filteredData.length === 0) {
-            html = `<tr><td colspan="5" class="p-8 text-center text-slate-400">No records found.</td></tr>`;
+            html = `<tr><td colspan="5" class="p-8 text-center text-slate-400">No matching customer records found.</td></tr>`;
         } else {
             filteredData.sort((a, b) => new Date(a.nextServiceDate || '2099-01-01') - new Date(b.nextServiceDate || '2099-01-01'));
 
@@ -144,7 +182,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </td>
                         <td class="p-4 text-sm text-slate-600">
                             <span class="font-semibold block text-slate-800">${item.unitType || 'Compact'}</span>
-                            <span class="text-xs text-slate-400">Bill: #${item.billNo || 'N/A'} (₹${item.amount || '0'})</span>
+                            <span class="text-xs text-blue-600 font-bold">Bill ID: #${item.billNo || 'N/A'}</span> (₹${item.amount || '0'})
                         </td>
                         <td class="p-4">
                             <span class="font-semibold text-slate-700">${item.nextServiceDate ? new Date(item.nextServiceDate).toLocaleDateString('en-IN') : '-'}</span>
@@ -172,6 +210,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         historyModal.classList.add('flex');
 
         try {
+            const { getDocs, collection } = await import("https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js");
             const logsSnapshot = await getDocs(collection(db, "customers", cxId, "service_logs"));
             let logsHtml = `
                 <div class="bg-slate-50 p-3 rounded-xl border text-xs font-bold grid grid-cols-4 gap-2 text-slate-500 uppercase">
@@ -207,7 +246,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // --- Add New Customer Form ---
+    // --- Add New Customer Form with Auto Parent Bill Number Generation ---
     addCxForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('save-cx-btn');
@@ -222,7 +261,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const startDate = document.getElementById('cx-start-date').value;
             const endDate = document.getElementById('cx-end-date').value;
             const amount = Number(document.getElementById('cx-amount').value);
-            const billNo = document.getElementById('cx-bill').value;
+            
+            let billNo = document.getElementById('cx-bill').value;
+            if(!billNo) {
+                const randomNum = Math.floor(1000 + Math.random() * 9000);
+                billNo = `OWS-2026-${randomNum}`;
+            }
 
             const startDt = new Date(startDate || Date.now());
             startDt.setMonth(startDt.getMonth() + 3);
@@ -237,8 +281,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             addCxModal.classList.add('hidden');
             addCxModal.classList.remove('flex');
             addCxForm.reset();
-            fetchMasterData();
-            alert("New service card added successfully!");
+            alert("New service card added successfully with Bill ID: " + billNo);
         } catch (err) {
             console.error(err);
             alert("Error saving customer record.");
@@ -264,7 +307,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const engineer = document.getElementById('quick-service-engineer').value;
             const remark = document.getElementById('quick-service-remark').value;
 
-            // If manual paper bill entry is selected, create new customer first
             if(cxId === 'NEW_MANUAL') {
                 const name = document.getElementById('manual-name').value;
                 const phone = document.getElementById('manual-phone').value;
@@ -278,11 +320,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
 
+                const autoBillNo = `OWS-PB-${Math.floor(1000 + Math.random() * 9000)}`;
+
                 const newCxRef = await addDoc(collection(db, "customers"), {
                     name, phone, address, unitType,
                     startDate: serviceDate,
                     amount: Number(amount),
-                    billNo: "Paper-Bill",
+                    billNo: autoBillNo,
                     status: "Active",
                     createdAt: serverTimestamp()
                 });
@@ -316,7 +360,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             quickServiceModal.classList.remove('flex');
             quickServiceForm.reset();
             if(manualFieldsDiv) manualFieldsDiv.classList.add('hidden');
-            fetchMasterData();
             alert("Service logged successfully and next due date updated!");
         } catch (err) {
             console.error(err);
@@ -344,5 +387,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    fetchMasterData();
+    // Initialize Real-time Listener on Load
+    initRealtimeListener();
 });

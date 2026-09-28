@@ -53,11 +53,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Render Tasks (with Due status and Search filter) ---
+    // --- Render Tasks (Live Search & Service Update Queue) ---
     const renderTasks = () => {
         let tasksHTML = '';
         let today = new Date().toISOString().split('T')[0];
 
+        // Agar user search karega toh matching records aayenge, warna due ya saare active customers dikhenge
         let filteredTasks = allTasks.filter(data => {
             if(searchQuery) {
                 const nameMatch = data.name && data.name.toLowerCase().includes(searchQuery);
@@ -65,32 +66,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 const billMatch = data.billNo && data.billNo.toLowerCase().includes(searchQuery);
                 return nameMatch || phoneMatch || billMatch;
             }
-            return data.nextServiceDate && data.nextServiceDate <= today;
+            // Default view: Due today or past due, plus active customers
+            return true; 
         });
 
-        const displayList = searchQuery ? filteredTasks : allTasks.filter(data => data.nextServiceDate && data.nextServiceDate <= today);
-
-        if(displayList.length === 0) {
-            taskListEl.innerHTML = `<div class="text-center text-gray-400 py-10 text-sm">No tasks found matching your criteria.</div>`;
+        if(filteredTasks.length === 0) {
+            taskListEl.innerHTML = `<div class="text-center text-gray-400 py-10 text-sm">No customer records found matching your search.</div>`;
             return;
         }
 
-        displayList.forEach((data) => {
+        filteredTasks.forEach((data) => {
             const isDue = data.nextServiceDate && data.nextServiceDate <= today;
             tasksHTML += `
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
                     <div class="flex justify-between items-start mb-2">
                         <div>
-                            <h4 class="font-bold text-gray-900">${data.name}</h4>
+                            <h4 class="font-bold text-gray-900 text-base">${data.name}</h4>
                             <span class="text-xs text-blue-600 font-bold">Bill ID: #${data.billNo || 'N/A'}</span>
                         </div>
                         <span class="${isDue ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'} text-[10px] font-bold px-2 py-1 rounded">
-                            ${isDue ? 'Due Today' : 'Scheduled'}
+                            ${isDue ? 'Service Due' : 'Scheduled'}
                         </span>
                     </div>
                     <p class="text-xs text-gray-600 mb-1">📞 ${data.phone} | 📍 ${data.address || 'Location not added'}</p>
-                    <p class="text-xs text-gray-500 mb-3">📅 Next Service: <strong>${data.nextServiceDate || 'N/A'}</strong></p>
-                    <button onclick="window.openServiceModal('${data.id}', '${data.name}', '${data.phone}')" class="w-full bg-blue-50 text-blue-600 font-semibold py-2 rounded-lg text-sm hover:bg-blue-100 transition">Attend & Update Service</button>
+                    <p class="text-xs text-gray-500 mb-3">📅 Next Service Date: <strong>${data.nextServiceDate || 'N/A'}</strong></p>
+                    
+                    <!-- MAIN SERVICE UPDATE BUTTON -->
+                    <button onclick="window.openServiceModal('${data.id}', '${data.name}', '${data.phone}')" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-lg text-sm shadow hover:bg-blue-700 transition flex items-center justify-center gap-2">
+                        <span>Attend & Update Service</span>
+                    </button>
                 </div>
             `;
         });
@@ -98,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
         taskListEl.innerHTML = tasksHTML;
     };
 
-    // --- Add Customer Modal Logic (Tech Side with Auto Bill ID) ---
+    // --- Add Customer Modal Logic (Tech Side) ---
     const addCxModal = document.getElementById('add-cx-modal');
     document.getElementById('open-add-cx-btn').addEventListener('click', () => {
         addCxModal.classList.remove('hidden');

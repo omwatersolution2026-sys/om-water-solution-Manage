@@ -1,13 +1,14 @@
 // admin/js/dashboard.js
 
-import { getDocs, collection, addDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+import { getDocs, getDoc, collection, addDoc, updateDoc, doc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 import { db } from "./firebase-config.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
 
     // --- 1. SECURE SESSION CHECK ---
-    const authStatus = sessionStorage.getItem('isAdminLoggedIn') || sessionStorage.getItem('adminAuth');
-    if (authStatus !== 'true') {
+    const authLoggedIn = sessionStorage.getItem('isAdminLoggedIn');
+    const authTrue = sessionStorage.getItem('adminAuth');
+    if (authLoggedIn !== 'true' && authTrue !== 'true') {
         window.location.replace('index.html');
         return;
     }
@@ -15,41 +16,53 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tableBody = document.getElementById('master-table-body');
     const filterBtns = document.querySelectorAll('.filter-btn');
     const logoutBtn = document.getElementById('logout-btn');
-    
-    const statTotal = document.getElementById('stat-total');
-    const statToday = document.getElementById('stat-today');
-    const statMissed = document.getElementById('stat-missed');
-    const statUpcoming = document.getElementById('stat-upcoming');
 
-    // Modals & Forms
+    // Modals elements
     const addCxModal = document.getElementById('add-cx-modal');
     const openAddCxBtn = document.getElementById('open-add-cx-btn');
     const closeAddCxBtn = document.getElementById('close-add-cx-modal');
     const addCxForm = document.getElementById('add-cx-form');
 
     const historyModal = document.getElementById('history-modal');
-    const closeHistoryModalBtn = document.getElementById('close-history-modal');
+    const closeHistoryBtn = document.getElementById('close-history-modal');
     const historyContent = document.getElementById('history-content');
-    const historyModalTitle = document.getElementById('history-modal-title');
+    const historyTitle = document.getElementById('history-modal-title');
+
+    const quickServiceModal = document.getElementById('quick-service-modal');
+    const openQuickServiceBtn = document.getElementById('open-quick-service-btn');
+    const closeQuickServiceBtn = document.getElementById('close-quick-service');
+    const quickServiceForm = document.getElementById('quick-service-form');
+    const quickCxSelect = document.getElementById('quick-cx-select');
 
     let masterData = [];
 
-    // Modal Toggles
-    if(openAddCxBtn) openAddCxBtn.addEventListener('click', () => { addCxModal.classList.remove('hidden'); addCxModal.classList.add('flex'); });
-    if(closeAddCxBtn) closeAddCxBtn.addEventListener('click', () => { addCxModal.classList.add('hidden'); addCxModal.classList.remove('flex'); });
-    if(closeHistoryModalBtn) closeHistoryModalBtn.addEventListener('click', () => { historyModal.classList.add('hidden'); historyModal.classList.remove('flex'); });
+    // --- Modal Toggles ---
+    openAddCxBtn.addEventListener('click', () => { addCxModal.classList.remove('hidden'); addCxModal.classList.add('flex'); });
+    closeAddCxBtn.addEventListener('click', () => { addCxModal.classList.add('hidden'); addCxModal.classList.remove('flex'); });
 
+    closeHistoryBtn.addEventListener('click', () => { historyModal.classList.add('hidden'); historyModal.classList.remove('flex'); });
+
+    openQuickServiceBtn.addEventListener('click', () => {
+        populateCustomerDropdown();
+        document.getElementById('quick-service-date').value = new Date().toISOString().split('T')[0];
+        quickServiceModal.classList.remove('hidden');
+        quickServiceModal.classList.add('flex');
+    });
+    closeQuickServiceBtn.addEventListener('click', () => { quickServiceModal.classList.add('hidden'); quickServiceModal.classList.remove('flex'); });
+
+
+    // Helper functions for dates
     const getTodayStr = () => new Date().toISOString().split('T')[0];
     
     const getStatusInfo = (serviceDate) => {
-        if (!serviceDate) return { text: 'No Data', class: 'bg-gray-100 text-gray-600', category: 'unknown' };
+        if (!serviceDate) return { text: 'No Schedule', class: 'bg-slate-100 text-slate-600', category: 'unknown' };
         const today = getTodayStr();
-        if (serviceDate < today) return { text: 'Missed', class: 'bg-red-50 text-red-600 border border-red-200', category: 'missed' };
-        if (serviceDate === today) return { text: 'Today', class: 'bg-orange-50 text-orange-600 border border-orange-200', category: 'today' };
-        return { text: 'Upcoming', class: 'bg-green-50 text-green-600 border border-green-200', category: 'upcoming' };
+        if (serviceDate < today) return { text: 'Overdue / Missed', class: 'bg-red-100 text-red-700', category: 'missed' };
+        if (serviceDate === today) return { text: 'Due Today', class: 'bg-orange-100 text-orange-700', category: 'today' };
+        return { text: 'Upcoming', class: 'bg-green-100 text-green-700', category: 'upcoming' };
     };
 
-    // Fetch Master Data from Firebase
+    // --- Fetch Master Data ---
     const fetchMasterData = async () => {
         try {
             const querySnapshot = await getDocs(collection(db, "customers"));
@@ -58,9 +71,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             querySnapshot.forEach((docSnap) => {
                 const data = docSnap.data();
-                if(data.status !== "Deleted") { 
+                if(data.status !== "Deleted") {
                     counts.total++;
                     const statusObj = getStatusInfo(data.nextServiceDate);
+                    
                     if(statusObj.category === 'missed') counts.missed++;
                     if(statusObj.category === 'today') counts.today++;
                     if(statusObj.category === 'upcoming') counts.upcoming++;
@@ -69,20 +83,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
 
-            statTotal.textContent = counts.total;
-            statToday.textContent = counts.today;
-            statMissed.textContent = counts.missed;
-            statUpcoming.textContent = counts.upcoming;
+            // Update Stats UI
+            document.getElementById('stat-total').textContent = counts.total;
+            document.getElementById('stat-today').textContent = counts.today;
+            document.getElementById('stat-missed').textContent = counts.missed;
+            document.getElementById('stat-upcoming').textContent = counts.upcoming;
 
             renderTable('all');
         } catch (error) {
-            console.error("Error fetching data:", error);
-            tableBody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-red-500">Failed to load data from server.</td></tr>`;
+            console.error("Error fetching admin data:", error);
+            if(tableBody) tableBody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-red-500">Failed to load data.</td></tr>`;
         }
     };
 
-    // Render Master Table
+    // Populate Customer Dropdown for Quick Log
+    const populateCustomerDropdown = () => {
+        let optionsHtml = '<option value="">-- Choose Customer --</option>';
+        masterData.forEach(cx => {
+            optionsHtml += `<option value="${cx.id}">${cx.name} (${cx.phone})</option>`;
+        });
+        quickCxSelect.innerHTML = optionsHtml;
+    };
+
+    // --- Render Table ---
     const renderTable = (filterCat) => {
+        if(!tableBody) return;
         let html = '';
         const filteredData = filterCat === 'all' 
             ? masterData 
@@ -92,25 +117,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             html = `<tr><td colspan="5" class="p-8 text-center text-slate-400">No records found.</td></tr>`;
         } else {
             filteredData.sort((a, b) => new Date(a.nextServiceDate || '2099-01-01') - new Date(b.nextServiceDate || '2099-01-01'));
-            filteredData.forEach(item => {
-                const nextDateFormatted = item.nextServiceDate ? new Date(item.nextServiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
-                const contractFrom = item.startDate ? new Date(item.startDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }) : '';
-                const contractTo = item.endDate ? new Date(item.endDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }) : '';
 
+            filteredData.forEach(item => {
                 html += `
                     <tr class="hover:bg-slate-50 transition-colors">
                         <td class="p-4">
                             <p class="font-bold text-slate-800">${item.name}</p>
-                            <p class="text-xs text-slate-500">📞 ${item.phone} | ${item.address || ''}</p>
+                            <p class="text-xs text-slate-500 mt-0.5">📞 ${item.phone} • 📍 ${item.address || 'N/A'}</p>
                         </td>
-                        <td class="p-4 text-xs font-semibold text-slate-600">
-                            ${contractFrom && contractTo ? `${contractFrom} to${contractTo}` : 'N/A'}
-                            <p class="text-[10px] text-slate-400 font-normal">Bill: ${item.billNo || '-'} | ₹${item.amount || '0'}</p>
+                        <td class="p-4 text-sm text-slate-600">
+                            <span class="font-semibold block text-slate-800">${item.unitType || 'Compact'}</span>
+                            <span class="text-xs text-slate-400">Bill: #${item.billNo || 'N/A'} (₹${item.amount || '0'})</span>
                         </td>
-                        <td class="p-4 font-semibold text-slate-700">${nextDateFormatted}</td>
-                        <td class="p-4"><span class="px-3 py-1 rounded-full text-xs font-bold ${item.statusObj.class}">${item.statusObj.text}</span></td>
+                        <td class="p-4">
+                            <span class="font-semibold text-slate-700">${item.nextServiceDate ? new Date(item.nextServiceDate).toLocaleDateString('en-IN') : '-'}</span>
+                        </td>
+                        <td class="p-4">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold ${item.statusObj.class}">${item.statusObj.text}</span>
+                        </td>
                         <td class="p-4 text-right">
-                            <button onclick="window.viewHistory('${item.id}', '${item.name}')" class="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-100 transition">History</button>
+                            <button onclick="window.viewServiceHistory('${item.id}', '${item.name}')" class="bg-blue-50 text-blue-600 font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-blue-100 transition">
+                                View History Card
+                            </button>
                         </td>
                     </tr>
                 `;
@@ -119,106 +147,146 @@ document.addEventListener('DOMContentLoaded', async () => {
         tableBody.innerHTML = html;
     };
 
-    // Global function to view Service History Grid logs for a customer
-    window.viewHistory = async (cxId, cxName) => {
-        historyModalTitle.textContent = `Service History: ${cxName}`;
-        historyContent.innerHTML = `<p class="text-center text-slate-400 py-6">Loading service cards logs...</p>`;
+    // --- View Service History Grid (Physical Card View) ---
+    window.viewServiceHistory = async (cxId, cxName) => {
+        historyTitle.textContent = `Service History Card: ${cxName}`;
+        historyContent.innerHTML = `<div class="p-4 text-center text-slate-400">Loading service logs...</div>`;
         historyModal.classList.remove('hidden');
         historyModal.classList.add('flex');
 
         try {
-            const logsQuery = query(collection(db, "customers", cxId, "service_logs"), orderBy("date", "desc"));
-            const snapshot = await getDocs(logsQuery);
-            
-            if(snapshot.empty) {
-                historyContent.innerHTML = `<div class="p-6 text-center text-slate-400 bg-slate-50 rounded-2xl"><p>No service history recorded yet.</p><p class="text-xs mt-1">Technician will update this during scheduled visits.</p></div>`;
-                return;
+            const logsSnapshot = await getDocs(collection(db, "customers", cxId, "service_logs"));
+            let logsHtml = `
+                <div class="bg-slate-50 p-3 rounded-xl border text-xs font-bold grid grid-cols-4 gap-2 text-slate-500 uppercase">
+                    <div>Date / Status</div>
+                    <div>Part Replaced</div>
+                    <div>Amount</div>
+                    <div>Engineer</div>
+                </div>
+            `;
+
+            if(logsSnapshot.empty) {
+                logsHtml += `<div class="p-6 text-center text-slate-400 text-sm">No service history logs recorded yet.</div>`;
+            } else {
+                logsSnapshot.forEach(logDoc => {
+                    const log = logDoc.data();
+                    logsHtml += `
+                        <div class="bg-white p-3 rounded-xl border border-slate-100 text-sm grid grid-cols-4 gap-2 items-center shadow-sm">
+                            <div>
+                                <span class="font-bold text-slate-800 block">${log.date || 'N/A'}</span>
+                                <span class="text-[11px] text-blue-600 font-semibold">${log.status || 'Service'}</span>
+                            </div>
+                            <div class="text-slate-600 text-xs">${log.partReplaced || 'None'}</div>
+                            <div class="font-bold text-slate-800">₹${log.amount || '0'}</div>
+                            <div class="text-xs text-slate-500">${log.engineer || 'Amey'}</div>
+                        </div>
+                    `;
+                });
             }
-
-            let logsHtml = `<div class="space-y-3">`;
-            snapshot.forEach(doc => {
-                const log = doc.data();
-                logsHtml += `
-                    <div class="bg-slate-50 border border-slate-100 p-4 rounded-2xl space-y-2">
-                        <div class="flex justify-between items-center">
-                            <span class="text-xs font-bold bg-blue-100 text-blue-700 px-2.5 py-1 rounded-md">📅 ${log.date || 'N/A'}</span>
-                            <span class="text-xs font-semibold text-slate-500">Engineer: ${log.engineer || 'Amey'}</span>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2 text-xs pt-1">
-                            <div><span class="text-slate-400">Status:</span> <strong class="text-slate-700">${log.status || 'Service'}</strong></div>
-                            <div><span class="text-slate-400">Part Replaced:</span> <strong class="text-slate-700">${log.partReplaced || 'None'}</strong></div>
-                        </div>
-                        <div class="text-xs pt-1 border-t border-slate-200/60">
-                            <span class="text-slate-400">Remark:</span> <span class="text-slate-800 font-medium">${log.remark || 'N/A'}</span>
-                        </div>
-                    </div>
-                `;
-            });
-            logsHtml += `</div>`;
             historyContent.innerHTML = logsHtml;
-
         } catch (err) {
             console.error(err);
-            historyContent.innerHTML = `<p class="text-center text-red-500 py-4">Failed to load history logs.</p>`;
+            historyContent.innerHTML = `<div class="p-4 text-center text-red-500">Failed to load history.</div>`;
         }
     };
 
-    // Save New Customer / Service Card
-    if(addCxForm) {
-        addCxForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const saveBtn = document.getElementById('save-cx-btn');
-            saveBtn.textContent = "Saving Record...";
-            saveBtn.disabled = true;
+    // --- Add New Customer Form ---
+    addCxForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('save-cx-btn');
+        btn.textContent = "Saving...";
+        btn.disabled = true;
 
-            try {
-                const name = document.getElementById('cx-name').value;
-                const phone = document.getElementById('cx-phone').value;
-                const address = document.getElementById('cx-address').value;
-                const unitType = document.getElementById('cx-unit').value;
-                const startDate = document.getElementById('cx-start-date').value;
-                const endDate = document.getElementById('cx-end-date').value;
-                const amount = Number(document.getElementById('cx-amount').value);
-                const billNo = document.getElementById('cx-bill').value;
+        try {
+            const name = document.getElementById('cx-name').value;
+            const phone = document.getElementById('cx-phone').value;
+            const address = document.getElementById('cx-address').value;
+            const unitType = document.getElementById('cx-unit').value;
+            const startDate = document.getElementById('cx-start-date').value;
+            const endDate = document.getElementById('cx-end-date').value;
+            const amount = Number(document.getElementById('cx-amount').value);
+            const billNo = document.getElementById('cx-bill').value;
 
-                // Default next service date: 3 months from start date
-                const startDt = new Date(startDate || Date.now());
-                startDt.setMonth(startDt.getMonth() + 3);
-                const nextServiceDate = startDt.toISOString().split('T')[0];
+            const startDt = new Date(startDate || Date.now());
+            startDt.setMonth(startDt.getMonth() + 3);
+            const nextServiceDate = startDt.toISOString().split('T')[0];
 
-                await addDoc(collection(db, "customers"), {
-                    name, phone, address, unitType, startDate, endDate, nextServiceDate, amount, billNo,
-                    status: "Active",
-                    createdAt: serverTimestamp()
-                });
+            await addDoc(collection(db, "customers"), {
+                name, phone, address, unitType, startDate, endDate, nextServiceDate, amount, billNo,
+                status: "Active",
+                createdAt: serverTimestamp()
+            });
 
-                addCxModal.classList.add('hidden');
-                addCxModal.classList.remove('flex');
-                addCxForm.reset();
-                fetchMasterData();
-            } catch (error) {
-                console.error(error);
-                alert("Failed to save customer record.");
-            } finally {
-                saveBtn.textContent = "Save Record";
-                saveBtn.disabled = false;
-            }
-        });
-    }
+            addCxModal.classList.add('hidden');
+            addCxModal.classList.remove('flex');
+            addCxForm.reset();
+            fetchMasterData();
+            alert("New service card added successfully!");
+        } catch (err) {
+            console.error(err);
+            alert("Error saving customer record.");
+        } finally {
+            btn.textContent = "Save Service Card Record";
+            btn.disabled = false;
+        }
+    });
 
-    // Filter Buttons logic
+    // --- Direct Quick Service Entry for Existing Customer ---
+    quickServiceForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('save-quick-service-btn');
+        btn.textContent = "Logging & Updating...";
+        btn.disabled = true;
+
+        try {
+            const cxId = quickCxSelect.value;
+            const serviceDate = document.getElementById('quick-service-date').value;
+            const status = document.getElementById('quick-service-status').value;
+            const partReplaced = document.getElementById('quick-service-part').value || 'None';
+            const amount = document.getElementById('quick-service-amount').value;
+            const engineer = document.getElementById('quick-service-engineer').value;
+            const remark = document.getElementById('quick-service-remark').value;
+
+            // 1. Save log to sub-collection
+            await addDoc(collection(db, "customers", cxId, "service_logs"), {
+                date: serviceDate, status, partReplaced, amount, engineer, remark,
+                createdAt: serverTimestamp()
+            });
+
+            // 2. Next Service Date 3 months forward
+            const nextDt = new Date(serviceDate);
+            nextDt.setMonth(nextDt.getMonth() + 3);
+            const nextServiceDateStr = nextDt.toISOString().split('T')[0];
+
+            // 3. Update main record
+            await updateDoc(doc(db, "customers", cxId), {
+                nextServiceDate: nextServiceDateStr
+            });
+
+            quickServiceModal.classList.add('hidden');
+            quickServiceModal.classList.remove('flex');
+            quickServiceForm.reset();
+            fetchMasterData();
+            alert("Service logged successfully and next due date updated!");
+        } catch (err) {
+            console.error(err);
+            alert("Failed to log service.");
+        } finally {
+            btn.textContent = "Save Service Log & Update Due Date";
+            btn.disabled = false;
+        }
+    });
+
+    // Filters Event Listeners
     filterBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
-            filterBtns.forEach(b => {
-                b.classList.remove('bg-white', 'shadow', 'text-slate-800');
-                b.classList.add('text-slate-500');
-            });
-            e.target.classList.add('bg-white', 'shadow', 'text-slate-800');
-            e.target.classList.remove('text-slate-500');
+            filterBtns.forEach(b => b.classList.remove('active', 'bg-white', 'shadow', 'text-slate-800'));
+            e.target.classList.add('active', 'bg-white', 'shadow', 'text-slate-800');
             renderTable(e.target.dataset.filter);
         });
     });
 
+    // Logout
     if(logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             sessionStorage.clear();

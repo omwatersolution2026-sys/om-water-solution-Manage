@@ -1,3 +1,5 @@
+// admin/js/login.js
+
 document.addEventListener('DOMContentLoaded', () => {
     // Agar pehle se login hai, toh direct dashboard par bhej do
     if (sessionStorage.getItem('adminAuth') === 'true') {
@@ -31,14 +33,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 4. Error Handling & Animation ---
     const triggerErrorState = () => {
+        // Haptic feedback for mobile
         if (navigator.vibrate) {
-            navigator.vibrate([50, 50, 50]);
+            navigator.vibrate([50, 50, 50]); 
         }
+
         errorMsg.textContent = "Incorrect PIN. Please try again.";
         errorAlert.classList.remove('hidden');
         errorAlert.classList.add('fade-in-up');
         dotContainer.classList.add('animate-shake');
 
+        // Reset state after animation completes
         setTimeout(() => {
             dotContainer.classList.remove('animate-shake');
             currentPin = '';
@@ -59,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadingOverlay.classList.add('flex', 'fade-in-up');
             }
             
-            // 👉 YE RAHA MAIN FIX: 'adminAuth' use kiya hai
+            // Secure Session Entry
             sessionStorage.setItem('adminAuth', 'true');
             sessionStorage.setItem('loginTime', new Date().toISOString());
             
@@ -115,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 8. Keyboard Support ---
+    // --- 8. Keyboard Support (For laptop testing) ---
     document.addEventListener('keydown', (e) => {
         if (isProcessing) return;
         if (e.key >= '0' && e.key <= '9') {

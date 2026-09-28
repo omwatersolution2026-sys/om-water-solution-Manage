@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closeQuickServiceBtn = document.getElementById('close-quick-service');
     const quickServiceForm = document.getElementById('quick-service-form');
     const quickCxSelect = document.getElementById('quick-cx-select');
+    const manualFieldsDiv = document.getElementById('manual-cx-fields');
 
     let masterData = [];
 
@@ -48,8 +49,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         quickServiceModal.classList.remove('hidden');
         quickServiceModal.classList.add('flex');
     });
-    closeQuickServiceBtn.addEventListener('click', () => { quickServiceModal.classList.add('hidden'); quickServiceModal.classList.remove('flex'); });
+    closeQuickServiceBtn.addEventListener('click', () => { 
+        quickServiceModal.classList.add('hidden'); 
+        quickServiceModal.classList.remove('flex');
+        if(manualFieldsDiv) manualFieldsDiv.classList.add('hidden');
+    });
 
+    // Toggle Manual Fields if "+ Add New (From Paper Bill)" is selected
+    if(quickCxSelect) {
+        quickCxSelect.addEventListener('change', (e) => {
+            if(e.target.value === 'NEW_MANUAL') {
+                manualFieldsDiv.classList.remove('hidden');
+            } else {
+                manualFieldsDiv.classList.add('hidden');
+            }
+        });
+    }
 
     // Helper functions for dates
     const getTodayStr = () => new Date().toISOString().split('T')[0];
@@ -96,13 +111,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // Populate Customer Dropdown for Quick Log
+    // Populate Customer Dropdown for Quick Log (Includes Paper Bill Option)
     const populateCustomerDropdown = () => {
         let optionsHtml = '<option value="">-- Choose Customer --</option>';
+        optionsHtml += '<option value="NEW_MANUAL" class="font-bold text-blue-600">+ Add New (From Paper Bill)</option>';
         masterData.forEach(cx => {
             optionsHtml += `<option value="${cx.id}">${cx.name} (${cx.phone})</option>`;
         });
         quickCxSelect.innerHTML = optionsHtml;
+        if(manualFieldsDiv) manualFieldsDiv.classList.add('hidden');
     };
 
     // --- Render Table ---
@@ -231,7 +248,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // --- Direct Quick Service Entry for Existing Customer ---
+    // --- Direct Quick Service / Paper Bill Entry ---
     quickServiceForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('save-quick-service-btn');
@@ -239,13 +256,45 @@ document.addEventListener('DOMContentLoaded', async () => {
         btn.disabled = true;
 
         try {
-            const cxId = quickCxSelect.value;
+            let cxId = quickCxSelect.value;
             const serviceDate = document.getElementById('quick-service-date').value;
             const status = document.getElementById('quick-service-status').value;
             const partReplaced = document.getElementById('quick-service-part').value || 'None';
             const amount = document.getElementById('quick-service-amount').value;
             const engineer = document.getElementById('quick-service-engineer').value;
             const remark = document.getElementById('quick-service-remark').value;
+
+            // If manual paper bill entry is selected, create new customer first
+            if(cxId === 'NEW_MANUAL') {
+                const name = document.getElementById('manual-name').value;
+                const phone = document.getElementById('manual-phone').value;
+                const address = document.getElementById('manual-address').value;
+                const unitType = document.getElementById('manual-unit').value;
+
+                if(!name || !phone) {
+                    alert("Please enter customer name and phone number.");
+                    btn.textContent = "Save Service Log & Update";
+                    btn.disabled = false;
+                    return;
+                }
+
+                const newCxRef = await addDoc(collection(db, "customers"), {
+                    name, phone, address, unitType,
+                    startDate: serviceDate,
+                    amount: Number(amount),
+                    billNo: "Paper-Bill",
+                    status: "Active",
+                    createdAt: serverTimestamp()
+                });
+                cxId = newCxRef.id;
+            }
+
+            if(!cxId) {
+                alert("Please select or add a customer.");
+                btn.textContent = "Save Service Log & Update";
+                btn.disabled = false;
+                return;
+            }
 
             // 1. Save log to sub-collection
             await addDoc(collection(db, "customers", cxId, "service_logs"), {
@@ -266,13 +315,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             quickServiceModal.classList.add('hidden');
             quickServiceModal.classList.remove('flex');
             quickServiceForm.reset();
+            if(manualFieldsDiv) manualFieldsDiv.classList.add('hidden');
             fetchMasterData();
             alert("Service logged successfully and next due date updated!");
         } catch (err) {
             console.error(err);
-            alert("Failed to log service.");
+            alert("Failed to process paper record.");
         } finally {
-            btn.textContent = "Save Service Log & Update Due Date";
+            btn.textContent = "Save Service Log & Update";
             btn.disabled = false;
         }
     });

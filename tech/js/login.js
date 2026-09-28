@@ -1,6 +1,11 @@
 // tech/js/login.js
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Agar tech pehle se login hai, toh direct dashboard par bhej do
+    if (sessionStorage.getItem('techAuth') === 'true') {
+        window.location.replace('dashboard.html');
+    }
+
     // --- 1. DOM Elements Selection ---
     const numpadBtns = document.querySelectorAll('.numpad-btn');
     const backspaceBtn = document.getElementById('backspace-btn');
@@ -12,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 2. State Management ---
     let currentPin = '';
-    const CORRECT_PIN = '2026'; // Universal PIN
+    const CORRECT_PIN = '2026'; // Tech Portal PIN
     let isProcessing = false;
 
     // --- 3. UI Update Logic (Dots Fill Effect) ---
@@ -29,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 4. Error Handling & Animation ---
     const triggerErrorState = () => {
         if (navigator.vibrate) {
-            navigator.vibrate([50, 50, 50]); // Haptic feedback
+            navigator.vibrate([50, 50, 50]); // Mobile vibration alert
         }
 
         errorMsg.textContent = "Incorrect PIN. Please try again.";
@@ -52,11 +57,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentPin === CORRECT_PIN) {
             errorAlert.classList.add('hidden');
             
-            loadingOverlay.classList.remove('hidden');
-            loadingOverlay.classList.add('flex', 'fade-in-up');
+            if(loadingOverlay) {
+                loadingOverlay.classList.remove('hidden');
+                loadingOverlay.classList.add('flex', 'fade-in-up');
+            }
             
             // ISOLATED SESSION FOR TECH PORTAL
-            sessionStorage.setItem('isTechLoggedIn', 'true');
+            sessionStorage.setItem('techAuth', 'true');
             sessionStorage.setItem('techLoginTime', new Date().toISOString());
             
             setTimeout(() => {
@@ -104,12 +111,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    backspaceBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        handleBackspace();
-    });
+    if(backspaceBtn) {
+        backspaceBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            handleBackspace();
+        });
+    }
 
-    // Keyboard support for testing
+    // Keyboard support for testing on laptop
     document.addEventListener('keydown', (e) => {
         if (isProcessing) return;
         if (e.key >= '0' && e.key <= '9') {

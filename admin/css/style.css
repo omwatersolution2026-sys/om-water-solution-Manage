@@ -27,10 +27,10 @@ body {
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Jab user number dabayega toh dot black ho jayega aur halka sa bada hoga (Pop effect) */
+/* Jab user number dabayega toh dot fill hoga aur halka sa bada hoga (Pop effect) */
 .pin-dot.filled {
-    background-color: #111827; /* Dark charcoal color */
-    border-color: #111827;
+    background-color: #2563eb; /* Brand Blue */
+    border-color: #2563eb;
     transform: scale(1.15);
 }
 
@@ -49,7 +49,7 @@ body {
     animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
 }
 
-/* Dashboard items aur modals ke liye smooth Fade-In-Up animation (Next files me use hoga) */
+/* Dashboard items aur modals ke liye smooth Fade-In-Up animation */
 @keyframes fadeInUp {
     from {
         opacity: 0;
@@ -70,5 +70,5 @@ body {
     background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(229, 231, 235, 0.5); /* Subtle border */
+    border-bottom: 1px solid rgba(229, 231, 235, 0.5);
 }

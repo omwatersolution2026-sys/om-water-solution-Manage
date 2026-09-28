@@ -2,98 +2,172 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Marketing & Calling | Om Water Solution</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Marketing Dashboard | Om Water Solution</title>
+    
+    <!-- Security Check -->
     <script>
-        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] }, colors: { brand: '#0ea5e9', dark: '#1e293b' } } } }
+        if(sessionStorage.getItem('marketingAuth') !== 'true') {
+            window.location.replace('index.html');
+        }
+    </script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Tailwind Config for Marketing Theme -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { brandIndigo: '#6366f1', dark: '#312e81' } 
+                }
+            }
+        }
     </script>
 </head>
-<body class="bg-gray-50 text-dark antialiased">
+<body class="bg-gray-50 text-gray-800 antialiased pb-20">
 
-    <!-- Navbar -->
-    <nav class="bg-white shadow-sm border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+    <!-- Top Navigation Bar -->
+    <nav class="bg-white border-b border-indigo-100 px-4 py-3 flex justify-between items-center sticky top-0 z-40 shadow-sm glass-effect">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-brand/10 text-brand rounded-xl flex items-center justify-center font-bold">OW</div>
+            <div class="w-10 h-10 bg-indigo-50 text-brandIndigo rounded-xl flex items-center justify-center border border-indigo-100">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"></path></svg>
+            </div>
             <div>
-                <h1 class="font-bold text-lg leading-tight">Calling Portal</h1>
-                <p class="text-xs text-gray-500">Sales & Service Management</p>
+                <h1 class="font-bold text-lg leading-none text-dark">Call Queue</h1>
+                <p class="text-[10px] text-brandIndigo font-bold uppercase tracking-wider mt-1">Marketing Desk</p>
             </div>
         </div>
-        <button id="logout-btn" class="text-sm font-medium text-red-500 hover:text-red-700 bg-red-50 px-4 py-2 rounded-lg">Logout</button>
+        <button id="logout-btn" class="text-xs font-semibold text-red-500 bg-red-50 px-3 py-2 rounded-lg">Logout</button>
     </nav>
 
-    <div class="max-w-5xl mx-auto p-6">
+    <!-- Main Content Area -->
+    <main class="max-w-3xl mx-auto p-4 mt-2 space-y-6 fade-in-up">
         
-        <!-- Tabs (Sales vs Service) -->
-        <div class="flex bg-white rounded-xl p-1 shadow-sm mb-6 border border-gray-100 max-w-sm">
-            <button id="tab-sales" class="flex-1 py-2 text-sm font-bold rounded-lg bg-brand text-white shadow transition-all">Sales Leads</button>
-            <button id="tab-service" class="flex-1 py-2 text-sm font-medium rounded-lg text-gray-500 hover:text-dark transition-all">Due Services</button>
-        </div>
-
-        <!-- ================= SALES VIEW ================= -->
-        <div id="view-sales" class="block">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold">Lead Pipeline</h2>
-                <button id="open-add-lead-btn" class="bg-dark text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow hover:-translate-y-0.5 transition-all">+ Add Lead</button>
+        <!-- Stats Bar -->
+        <div class="flex gap-3">
+            <div class="flex-1 bg-white p-4 rounded-2xl border border-indigo-50 shadow-sm">
+                <p class="text-xs text-gray-500 font-bold uppercase mb-1">Total Leads</p>
+                <h3 class="text-2xl font-black text-dark" id="stat-total">0</h3>
             </div>
-            <!-- Leads Grid -->
-            <div id="leads-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div class="text-center text-gray-400 py-10 text-sm col-span-full">Loading leads...</div>
+            <div class="flex-1 bg-white p-4 rounded-2xl border border-indigo-50 shadow-sm">
+                <p class="text-xs text-gray-500 font-bold uppercase mb-1">Follow-ups</p>
+                <h3 class="text-2xl font-black text-orange-500" id="stat-followup">0</h3>
             </div>
         </div>
 
-        <!-- ================= SERVICE CALLS VIEW ================= -->
-        <div id="view-service" class="hidden">
-            <div class="mb-4">
-                <h2 class="text-xl font-bold">Upcoming & Due Services</h2>
-                <p class="text-sm text-gray-500">Call customers to confirm or reschedule their maintenance.</p>
-            </div>
-            <!-- Services Grid -->
-            <div id="services-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="text-center text-gray-400 py-10 text-sm col-span-full">Loading service schedule...</div>
-            </div>
-        </div>
+        <!-- Add New Lead Button -->
+        <button id="open-add-lead-btn" class="w-full bg-dark text-white font-bold py-4 rounded-xl shadow-lg hover:bg-indigo-900 transition-colors flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Add New Lead
+        </button>
 
-    </div>
-
-    <!-- Modals (Hidden by default) -->
-    <!-- 1. Add Lead Modal (Truncated for space, assume same as before but cleaner) -->
-    <div id="add-lead-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden items-center justify-center z-50 p-4 transition-all opacity-0">
-        <div id="add-modal-content" class="bg-white rounded-2xl w-full max-w-md p-6 transform translate-y-full transition-all">
-            <h3 class="text-lg font-bold mb-4">New Lead</h3>
-            <form id="add-lead-form" class="space-y-4">
-                <input type="text" id="lead-name" placeholder="Customer Name" required class="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-brand/20">
-                <input type="tel" id="lead-phone" placeholder="Phone Number" required class="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-brand/20">
-                <select id="lead-status" class="w-full px-4 py-3 border rounded-xl outline-none bg-white">
-                    <option value="New">New Lead</option>
-                    <option value="Follow-up">Follow-up</option>
-                </select>
-                <div class="flex gap-3 pt-2">
-                    <button type="button" class="close-add-btn flex-1 px-4 py-3 border border-gray-200 text-gray-600 rounded-xl font-medium">Cancel</button>
-                    <button type="submit" id="save-lead-btn" class="flex-1 px-4 py-3 bg-brand text-white rounded-xl font-medium">Save Lead</button>
+        <!-- Leads List Section -->
+        <div>
+            <h2 class="text-lg font-bold text-dark mb-3">Recent Leads</h2>
+            <div id="leads-list" class="space-y-3">
+                <!-- Skeleton Loader -->
+                <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm animate-pulse">
+                    <div class="h-4 w-32 bg-gray-200 rounded mb-2"></div>
+                    <div class="h-3 w-24 bg-gray-100 rounded"></div>
                 </div>
-            </form>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ================= ADD LEAD MODAL ================= -->
+    <div id="add-lead-modal" class="fixed inset-0 bg-black/60 hidden items-end sm:items-center justify-center z-50 transition-opacity">
+        <div class="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl max-h-[90vh] flex flex-col shadow-2xl">
+            <div class="flex justify-between items-center p-5 border-b border-gray-100">
+                <h3 class="text-lg font-bold text-dark">Add New Lead</h3>
+                <button class="close-add-modal text-gray-400 text-2xl">&times;</button>
+            </div>
+            <div class="p-5 overflow-y-auto">
+                <form id="add-lead-form" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Name / Business Name</label>
+                        <input type="text" id="new-lead-name" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-brandIndigo outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Phone Number</label>
+                        <input type="tel" id="new-lead-phone" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-brandIndigo outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Source / Requirement</label>
+                        <input type="text" id="new-lead-req" placeholder="e.g. Needs new RO, Just Enquiry" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-brandIndigo outline-none">
+                    </div>
+                    <button type="submit" id="save-lead-btn" class="w-full bg-brandIndigo text-white font-bold py-3.5 rounded-xl shadow-md mt-2">Save Lead</button>
+                </form>
+            </div>
         </div>
     </div>
 
-    <!-- 2. Reschedule Service Modal -->
-    <div id="reschedule-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden items-center justify-center z-50 p-4 transition-all opacity-0">
-        <div id="reschedule-content" class="bg-white rounded-2xl w-full max-w-sm p-6 transform translate-y-full transition-all">
-            <h3 class="text-lg font-bold mb-1">Reschedule Service</h3>
-            <p id="reschedule-customer-name" class="text-sm text-gray-500 mb-4"></p>
-            <form id="reschedule-form" class="space-y-4">
-                <input type="hidden" id="reschedule-customer-id">
+    <!-- ================= UPDATE / CONVERT LEAD MODAL ================= -->
+    <div id="update-lead-modal" class="fixed inset-0 bg-black/60 hidden items-end sm:items-center justify-center z-50 transition-opacity">
+        <div class="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl max-h-[90vh] flex flex-col shadow-2xl">
+            <div class="flex justify-between items-center p-5 border-b border-gray-100 bg-indigo-50 rounded-t-3xl sm:rounded-t-3xl">
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">New Service Date</label>
-                    <input type="date" id="new-service-date" required class="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-brand/20">
+                    <h3 class="text-lg font-bold text-dark">Update Lead</h3>
+                    <p id="action-lead-name" class="text-xs font-bold text-brandIndigo">Name</p>
                 </div>
-                <div class="flex gap-3 pt-2">
-                    <button type="button" class="close-reschedule-btn flex-1 px-4 py-3 border border-gray-200 text-gray-600 rounded-xl font-medium">Cancel</button>
-                    <button type="submit" id="confirm-reschedule-btn" class="flex-1 px-4 py-3 bg-orange-500 text-white rounded-xl font-medium">Reschedule</button>
-                </div>
-            </form>
+                <button class="close-update-modal text-gray-400 text-2xl">&times;</button>
+            </div>
+            
+            <div class="p-5 overflow-y-auto">
+                <form id="update-lead-form" class="space-y-4">
+                    <input type="hidden" id="action-lead-id">
+                    <input type="hidden" id="action-lead-phone">
+                    
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Status</label>
+                        <select id="action-status" class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-brandIndigo outline-none font-semibold">
+                            <option value="New">New</option>
+                            <option value="Follow-up">Follow-up</option>
+                            <option value="Not Interested">Not Interested</option>
+                            <option value="Converted" class="bg-green-100 text-green-700 font-bold">🎯 Converted (Move to Customer)</option>
+                        </select>
+                    </div>
+
+                    <div id="followup-date-container" class="hidden">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Next Follow-up Date</label>
+                        <input type="date" id="action-followup-date" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-brandIndigo outline-none">
+                    </div>
+
+                    <!-- Hidden fields that only show when 'Converted' is selected -->
+                    <div id="conversion-fields" class="hidden space-y-4 border-t border-gray-100 pt-4 mt-2">
+                        <p class="text-xs text-green-600 font-bold bg-green-50 p-2 rounded-lg">Fill details to create Master AMC / Customer Record</p>
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Full Address</label>
+                            <textarea id="convert-address" rows="2" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-brandIndigo outline-none"></textarea>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Unit</label>
+                                <input type="text" id="convert-unit" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Amount (₹)</label>
+                                <input type="number" id="convert-amount" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Remarks</label>
+                        <textarea id="action-remarks" rows="2" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-brandIndigo outline-none" placeholder="Notes from call..."></textarea>
+                    </div>
+
+                    <button type="submit" id="update-btn" class="w-full bg-dark text-white font-bold py-3.5 rounded-xl shadow-md mt-4">Update Status</button>
+                </form>
+            </div>
         </div>
     </div>
 

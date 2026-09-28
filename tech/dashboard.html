@@ -18,7 +18,7 @@
             <h1 class="font-bold text-lg">Tech Portal</h1>
             <p class="text-xs text-blue-100">Field Service & Billing</p>
         </div>
-        <button id="logout-btn" class="text-sm bg-white/20 px-3 py-1.5 rounded-lg font-medium">Logout</button>
+        <button id="logout-btn" class="text-sm bg-white/20 px-3 py-1.5 rounded-lg font-medium hover:bg-white/30 transition">Logout</button>
     </nav>
 
     <div class="p-4 max-w-lg mx-auto space-y-4">
@@ -36,7 +36,7 @@
             <button id="open-add-cx-btn" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow hover:bg-blue-700 transition-all">+ Add Customer</button>
         </div>
         
-        <!-- Task List -->
+        <!-- Task List Container -->
         <div id="task-list" class="space-y-3">
             <div class="text-center text-gray-400 py-10 text-sm">Loading tasks in real-time...</div>
         </div>
@@ -45,9 +45,9 @@
     <!-- ================= 1. COMPLETE SERVICE & PARTS MODAL ================= -->
     <div id="service-modal" class="fixed inset-0 bg-black/50 hidden items-end sm:items-center justify-center z-50 transition-opacity p-4">
         <div class="bg-white w-full sm:max-w-md rounded-2xl p-5 shadow-xl max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-4">
+            <div class="flex justify-between items-center mb-4 border-b pb-3">
                 <h3 class="text-lg font-bold">Complete Service & Parts</h3>
-                <button id="close-modal" class="text-gray-400 text-2xl leading-none">&times;</button>
+                <button id="close-modal" class="text-gray-400 text-2xl font-bold">&times;</button>
             </div>
             
             <form id="service-form" class="space-y-4">
@@ -65,45 +65,59 @@
                     </div>
                 </div>
 
-                <!-- Custom Work Description Option -->
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Detailed Work / What was done?</label>
-                    <textarea id="service-notes" rows="2" class="w-full px-3 py-2 border rounded-xl outline-none text-sm focus:ring-2 focus:ring-blue-500" placeholder="e.g. Pump checked, pipes cleaned, filter replaced..."></textarea>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Detailed Work Notes</label>
+                    <textarea id="service-notes" rows="2" class="w-full px-3 py-2 border rounded-xl outline-none text-sm focus:ring-2 focus:ring-blue-500" placeholder="e.g. Pump checked, pipes cleaned..."></textarea>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Total Amount (₹)</label>
-                    <input type="number" id="service-amount" required class="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. 500">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Total Amount Collected (₹)</label>
+                    <input type="number" id="service-amount" required class="w-full px-4 py-3 border rounded-xl outline-none font-bold text-blue-600 focus:ring-2 focus:ring-blue-500" placeholder="e.g. 1800">
                 </div>
 
-                <button type="submit" id="generate-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md">Complete & Generate Bill PDF</button>
+                <button type="submit" id="generate-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md hover:bg-blue-700 transition">Complete & Generate Bill PDF</button>
             </form>
 
             <!-- WhatsApp Share Section -->
-            <div id="whatsapp-container" class="mt-4 hidden">
-                <p class="text-xs text-center text-green-600 mb-2 font-bold">Bill Generated Successfully!</p>
-                <a id="whatsapp-btn" href="#" target="_blank" class="block w-full bg-green-500 text-white text-center font-bold py-3 rounded-xl shadow-md flex items-center justify-center gap-2">
+            <div id="whatsapp-container" class="mt-4 hidden space-y-2">
+                <p class="text-xs text-center text-green-600 font-bold">Bill Generated & Saved Successfully!</p>
+                <a id="whatsapp-btn" href="#" target="_blank" class="block w-full bg-green-500 text-white text-center font-bold py-3 rounded-xl shadow-md hover:bg-green-600 transition flex items-center justify-center gap-2">
                     Send Bill to WhatsApp
                 </a>
-                <button onclick="location.reload()" class="w-full mt-2 text-sm text-gray-500 py-2">Close & Refresh</button>
+                <button onclick="location.reload()" class="w-full text-sm text-gray-500 py-2 font-medium">Close & Refresh</button>
             </div>
         </div>
     </div>
 
     <!-- ================= 2. ADD NEW CUSTOMER MODAL (TECH SIDE) ================= -->
-    <div id="add-cx-modal" class="fixed inset-0 bg-black/50 hidden items-end sm:items-center justify-center z-50 p-4">
+    <div id="add-cx-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
         <div class="bg-white w-full sm:max-w-md rounded-2xl p-5 shadow-xl max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-4">
+            <div class="flex justify-between items-center mb-4 border-b pb-3">
                 <h3 class="text-lg font-bold">Add New Customer</h3>
-                <button id="close-add-cx-modal" class="text-gray-400 text-2xl leading-none">&times;</button>
+                <button id="close-add-cx-modal" class="text-gray-400 text-2xl font-bold">&times;</button>
             </div>
             <form id="add-cx-form" class="space-y-4">
-                <input type="text" id="new-name" placeholder="Customer Full Name" required class="w-full px-4 py-3 border rounded-xl outline-none text-sm">
-                <input type="tel" id="new-phone" placeholder="Phone Number" required class="w-full px-4 py-3 border rounded-xl outline-none text-sm">
-                <input type="text" id="new-address" placeholder="Area / Complete Address" required class="w-full px-4 py-3 border rounded-xl outline-none text-sm">
-                <input type="text" id="new-unit" placeholder="Unit Model (e.g. Compact)" value="Compact" required class="w-full px-4 py-3 border rounded-xl outline-none text-sm">
-                <input type="text" id="new-bill" placeholder="Bill ID (Leave blank for auto-generation)" class="w-full px-4 py-3 border rounded-xl outline-none text-sm">
-                <button type="submit" id="save-cx-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md text-sm">Save & Set Initial Service</button>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Customer Full Name</label>
+                    <input type="text" id="new-name" placeholder="e.g. Sharma Ji" required class="w-full px-4 py-3 border rounded-xl outline-none text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Phone Number</label>
+                    <input type="tel" id="new-phone" placeholder="9876543210" required class="w-full px-4 py-3 border rounded-xl outline-none text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Area / Complete Address</label>
+                    <input type="text" id="new-address" placeholder="Location..." required class="w-full px-4 py-3 border rounded-xl outline-none text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Unit Model</label>
+                    <input type="text" id="new-unit" value="Compact" required class="w-full px-4 py-3 border rounded-xl outline-none text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Bill ID (Leave blank for auto-generation)</label>
+                    <input type="text" id="new-bill" placeholder="e.g. OWS-2026-XXXX" class="w-full px-4 py-3 border rounded-xl outline-none text-sm">
+                </div>
+                <button type="submit" id="save-cx-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md text-sm hover:bg-blue-700 transition">Save & Set Initial Service</button>
             </form>
         </div>
     </div>

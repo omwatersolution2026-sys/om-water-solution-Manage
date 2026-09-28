@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dotContainer = pinDots[0].parentElement;
 
     let currentPin = '';
-    const CORRECT_PIN = '2026'; // Universal PIN
+    const CORRECT_PIN = '2026';
     let isProcessing = false;
 
     const updateDotsUI = () => {
@@ -31,8 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const triggerErrorState = () => {
         if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
-        errorMsg.textContent = "Incorrect PIN. Try again.";
-        errorAlert.classList.remove('hidden');
+        if(errorMsg) errorMsg.textContent = "Incorrect PIN. Try again.";
+        if(errorAlert) errorAlert.classList.remove('hidden');
         dotContainer.classList.add('animate-shake');
 
         setTimeout(() => {
@@ -46,13 +46,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const verifyPin = () => {
         isProcessing = true;
         if (currentPin === CORRECT_PIN) {
-            errorAlert.classList.add('hidden');
+            if(errorAlert) errorAlert.classList.add('hidden');
             if(loadingOverlay) {
                 loadingOverlay.classList.remove('hidden');
                 loadingOverlay.classList.add('flex');
             }
             
-            // KEY FIX: Yeh key dashboard.html ke security check se match honi chahiye
+            // Set session key correctly
             sessionStorage.setItem('marketingAuth', 'true');
             
             setTimeout(() => {
@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const handleInput = (value) => {
         if (isProcessing) return;
-        if (!errorAlert.classList.contains('hidden')) errorAlert.classList.add('hidden');
+        if (errorAlert && !errorAlert.classList.contains('hidden')) errorAlert.classList.add('hidden');
         
         if (currentPin.length < 4) {
             currentPin += value;
@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentPin.length > 0) {
             currentPin = currentPin.slice(0, -1);
             updateDotsUI();
-            errorAlert.classList.add('hidden');
+            if(errorAlert) errorAlert.classList.add('hidden');
         }
     };
 

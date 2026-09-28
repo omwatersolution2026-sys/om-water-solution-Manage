@@ -1,270 +1,248 @@
 // tech/js/dashboard.js
 
-import { getDocs, collection, addDoc, updateDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+import { onSnapshot, collection, addDoc, updateDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 import { db } from "./firebase-config.js";
 
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
 
-    // --- 1. SECURE SESSION CHECK ---
-    const authStatus = sessionStorage.getItem('techAuth');
-    if (authStatus !== 'true') {
-        window.location.replace('index.html');
-        return;
-    }
+    const taskListEl = document.getElementById('task-list');
+    const modal = document.getElementById('service-modal');
+    const form = document.getElementById('service-form');
+    const searchInput = document.getElementById('tech-search-input');
+    const clearSearchBtn = document.getElementById('tech-clear-search');
 
-    const tasksListEl = document.getElementById('tech-tasks-list');
-    const logoutBtn = document.getElementById('logout-btn');
+    let allTasks = [];
+    let searchQuery = '';
 
-    // Service Modal elements
-    const serviceModal = document.getElementById('service-modal');
-    const closeServiceModalBtn = document.getElementById('close-service-modal');
-    const serviceForm = document.getElementById('service-update-form');
-
-    // Tech Add Customer Modal elements
-    const techAddModal = document.getElementById('tech-add-cx-modal');
-    const openTechAddBtn = document.getElementById('open-tech-add-cx');
-    const closeTechAddBtn = document.getElementById('close-tech-add-cx');
-    const techAddForm = document.getElementById('tech-add-cx-form');
-    
-    let activeCustomer = null;
-
-    // Modal toggles for Service Complete
-    if(closeServiceModalBtn) {
-        closeServiceModalBtn.addEventListener('click', () => {
-            serviceModal.classList.add('hidden');
-            serviceModal.classList.remove('flex');
-        });
-    }
-
-    // Modal toggles for Tech Adding New Customer
-    if(openTechAddBtn) {
-        openTechAddBtn.addEventListener('click', () => {
-            techAddModal.classList.remove('hidden');
-            techAddModal.classList.add('flex');
-        });
-    }
-    if(closeTechAddBtn) {
-        closeTechAddBtn.addEventListener('click', () => {
-            techAddModal.classList.add('hidden');
-            techAddModal.classList.remove('flex');
-        });
-    }
-
-    // Fetch Customers / Tasks
-    const fetchTechTasks = async () => {
-        try {
-            const snapshot = await getDocs(collection(db, "customers"));
-            let tasksHtml = '';
-            let count = 0;
-
+    // --- Real-time Sync with onSnapshot ---
+    const initRealtimeTasks = () => {
+        onSnapshot(collection(db, "customers"), (snapshot) => {
+            allTasks = [];
             snapshot.forEach((docSnap) => {
                 const data = docSnap.data();
                 if(data.status !== "Deleted") {
-                    count++;
-                    const cx = { id: docSnap.id, ...data };
-                    
-                    tasksHtml += `
-                        <div class="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-slate-50 transition">
-                            <div>
-                                <h4 class="font-bold text-slate-800 text-base">${cx.name}</h4>
-                                <p class="text-xs text-slate-500">📍 ${cx.address || 'No Address'}</p>
-                                <p class="text-xs font-semibold text-blue-600 mt-1">📞 Phone: ${cx.phone} | Unit: ${cx.unitType || 'Compact'}</p>
-                            </div>
-                            <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                                <div class="text-right">
-                                    <span class="text-xs font-bold block text-slate-400 uppercase">Due Date</span>
-                                    <span class="text-xs font-bold text-slate-700">${cx.nextServiceDate || 'N/A'}</span>
-                                </div>
-                                <button onclick='window.openServiceModal(${JSON.stringify(cx)})' class="bg-orange-600 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow hover:bg-orange-700 transition">
-                                    Complete Service
-                                </button>
-                            </div>
-                        </div>
-                    `;
+                    allTasks.push({ id: docSnap.id, ...data });
                 }
             });
-
-            if(count === 0) {
-                tasksListEl.innerHTML = `<div class="p-8 text-center text-slate-400">No customer records found.</div>`;
-            } else {
-                tasksListEl.innerHTML = tasksHtml;
-            }
-
-        } catch (error) {
-            console.error(error);
-            tasksListEl.innerHTML = `<div class="p-8 text-center text-red-500">Failed to load tasks.</div>`;
-        }
+            renderTasks();
+        }, (error) => {
+            console.error("Error syncing tasks in real-time:", error);
+            taskListEl.innerHTML = `<div class="text-center text-red-500 py-10 text-sm">Failed to sync live tasks.</div>`;
+        });
     };
 
-    // Save New Customer from Tech Portal
-    if(techAddForm) {
-        techAddForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('tech-save-cx-btn');
-            btn.textContent = "Saving Record...";
-            btn.disabled = true;
-
-            try {
-                const name = document.getElementById('tech-cx-name').value;
-                const phone = document.getElementById('tech-cx-phone').value;
-                const address = document.getElementById('tech-cx-address').value;
-                const unitType = document.getElementById('tech-cx-unit').value;
-                const startDate = document.getElementById('tech-cx-start-date').value;
-                const endDate = document.getElementById('tech-cx-end-date').value;
-                const amount = Number(document.getElementById('tech-cx-amount').value);
-                const billNo = document.getElementById('tech-cx-bill').value;
-
-                const startDt = new Date(startDate || Date.now());
-                startDt.setMonth(startDt.getMonth() + 3);
-                const nextServiceDate = startDt.toISOString().split('T')[0];
-
-                await addDoc(collection(db, "customers"), {
-                    name, phone, address, unitType, startDate, endDate, nextServiceDate, amount, billNo,
-                    status: "Active",
-                    createdAt: serverTimestamp()
-                });
-
-                techAddModal.classList.add('hidden');
-                techAddModal.classList.remove('flex');
-                techAddForm.reset();
-                fetchTechTasks();
-                alert("New customer service card added successfully!");
-            } catch (err) {
-                console.error(err);
-                alert("Failed to save customer record.");
-            } finally {
-                btn.textContent = "Save Service Card Record";
-                btn.disabled = false;
+    // --- Search Bar Event Listeners ---
+    if(searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            searchQuery = e.target.value.toLowerCase().trim();
+            if(searchQuery.length > 0) {
+                clearSearchBtn.classList.remove('hidden');
+            } else {
+                clearSearchBtn.classList.add('hidden');
             }
+            renderTasks();
         });
     }
 
-    // Open Service Modal
-    window.openServiceModal = (cx) => {
-        activeCustomer = cx;
-        document.getElementById('modal-cx-id').value = cx.id;
-        document.getElementById('modal-cx-name').value = cx.name + ' (' + cx.phone + ')';
-        document.getElementById('service-date').value = new Date().toISOString().split('T')[0];
-        document.getElementById('service-amount').value = cx.amount || 1800;
-        document.getElementById('service-part').value = '';
-        document.getElementById('service-remark').value = '';
-        
-        serviceModal.classList.remove('hidden');
-        serviceModal.classList.add('flex');
+    if(clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            searchQuery = '';
+            clearSearchBtn.classList.add('hidden');
+            renderTasks();
+        });
+    }
+
+    // --- Render Tasks (with Due status and Search filter) ---
+    const renderTasks = () => {
+        let tasksHTML = '';
+        let today = new Date().toISOString().split('T')[0];
+
+        let filteredTasks = allTasks.filter(data => {
+            if(searchQuery) {
+                const nameMatch = data.name && data.name.toLowerCase().includes(searchQuery);
+                const phoneMatch = data.phone && data.phone.includes(searchQuery);
+                const billMatch = data.billNo && data.billNo.toLowerCase().includes(searchQuery);
+                return nameMatch || phoneMatch || billMatch;
+            }
+            return data.nextServiceDate && data.nextServiceDate <= today;
+        });
+
+        const displayList = searchQuery ? filteredTasks : allTasks.filter(data => data.nextServiceDate && data.nextServiceDate <= today);
+
+        if(displayList.length === 0) {
+            taskListEl.innerHTML = `<div class="text-center text-gray-400 py-10 text-sm">No tasks found matching your criteria.</div>`;
+            return;
+        }
+
+        displayList.forEach((data) => {
+            const isDue = data.nextServiceDate && data.nextServiceDate <= today;
+            tasksHTML += `
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h4 class="font-bold text-gray-900">${data.name}</h4>
+                            <span class="text-xs text-blue-600 font-bold">Bill ID: #${data.billNo || 'N/A'}</span>
+                        </div>
+                        <span class="${isDue ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'} text-[10px] font-bold px-2 py-1 rounded">
+                            ${isDue ? 'Due Today' : 'Scheduled'}
+                        </span>
+                    </div>
+                    <p class="text-xs text-gray-600 mb-1">📞 ${data.phone} | 📍 ${data.address || 'Location not added'}</p>
+                    <p class="text-xs text-gray-500 mb-3">📅 Next Service: <strong>${data.nextServiceDate || 'N/A'}</strong></p>
+                    <button onclick="window.openServiceModal('${data.id}', '${data.name}', '${data.phone}')" class="w-full bg-blue-50 text-blue-600 font-semibold py-2 rounded-lg text-sm hover:bg-blue-100 transition">Attend & Update Service</button>
+                </div>
+            `;
+        });
+
+        taskListEl.innerHTML = tasksHTML;
     };
 
-    // Handle Form Submit & PDF Generation
-    serviceForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if(!activeCustomer) return;
+    // --- Add Customer Modal Logic (Tech Side with Auto Bill ID) ---
+    const addCxModal = document.getElementById('add-cx-modal');
+    document.getElementById('open-add-cx-btn').addEventListener('click', () => {
+        addCxModal.classList.remove('hidden');
+        addCxModal.classList.add('flex');
+    });
+    document.getElementById('close-add-cx-modal').addEventListener('click', () => {
+        addCxModal.classList.add('hidden');
+        addCxModal.classList.remove('flex');
+    });
 
-        const btn = document.getElementById('complete-service-btn');
-        btn.textContent = "Processing & Generating PDF...";
-        btn.disabled = true;
+    document.getElementById('add-cx-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('save-cx-btn');
+        btn.textContent = "Saving..."; btn.disabled = true;
 
         try {
-            const serviceDate = document.getElementById('service-date').value;
-            const status = document.getElementById('service-status').value;
-            const partReplaced = document.getElementById('service-part').value || 'None';
-            const amount = document.getElementById('service-amount').value;
-            const engineer = document.getElementById('service-engineer').value;
-            const remark = document.getElementById('service-remark').value;
+            const name = document.getElementById('new-name').value;
+            const phone = document.getElementById('new-phone').value;
+            const address = document.getElementById('new-address').value;
+            const unitType = document.getElementById('new-unit').value;
+            let billNo = document.getElementById('new-bill').value;
 
-            // 1. Save log in customer's sub-collection (History Grid Data)
-            await addDoc(collection(db, "customers", activeCustomer.id, "service_logs"), {
-                date: serviceDate,
-                status: status,
-                partReplaced: partReplaced,
-                remark: remark,
-                amount: amount,
-                engineer: engineer,
+            if(!billNo) {
+                const randomNum = Math.floor(1000 + Math.random() * 9000);
+                billNo = `OWS-2026-${randomNum}`;
+            }
+
+            const nextDate = new Date();
+            nextDate.setMonth(nextDate.getMonth() + 3);
+
+            await addDoc(collection(db, "customers"), {
+                name, phone, address, unitType, billNo,
+                status: "Active",
+                nextServiceDate: nextDate.toISOString().split('T')[0],
                 createdAt: serverTimestamp()
             });
 
-            // 2. Calculate next service date (3 months forward)
-            const nextDt = new Date(serviceDate);
-            nextDt.setMonth(nextDt.getMonth() + 3);
-            const nextServiceDateStr = nextDt.toISOString().split('T')[0];
-
-            // 3. Update customer's next service date in main collection
-            await updateDoc(doc(db, "customers", activeCustomer.id), {
-                nextServiceDate: nextServiceDateStr
-            });
-
-            // 4. Generate Official PDF Bill using jsPDF
-            const { jsPDF } = window.jspdf;
-            const docPdf = new jsPDF();
-
-            docPdf.setFont("helvetica", "bold");
-            docPdf.setFontSize(18);
-            docPdf.setTextColor(37, 99, 235);
-            docPdf.text("OM WATER SOLUTION", 105, 20, { align: "center" });
-
-            docPdf.setFontSize(10);
-            docPdf.setTextColor(100, 100, 100);
-            docPdf.text("Off. Add.: H. No. 1432/01, Nocil Colony, Talavali Gaon, Navi Mumbai - 400701", 105, 26, { align: "center" });
-            docPdf.text("Mob.: 9920716891 / 9004909145", 105, 32, { align: "center" });
-
-            docPdf.setLineWidth(0.5);
-            docPdf.line(20, 38, 190, 38);
-
-            docPdf.setFontSize(12);
-            docPdf.setTextColor(0, 0, 0);
-            docPdf.text("SERVICE & AMC BILL / CARD", 105, 46, { align: "center" });
-
-            docPdf.setFontSize(11);
-            docPdf.text(`Customer Name: ${activeCustomer.name}`, 20, 60);
-            docPdf.text(`Address: ${activeCustomer.address || 'N/A'}`, 20, 68);
-            docPdf.text(`Contact No: ${activeCustomer.phone}`, 20, 76);
-            
-            docPdf.text(`Service Date: ${serviceDate}`, 130, 60);
-            docPdf.text(`Engineer: ${engineer}`, 130, 68);
-            docPdf.text(`Unit: ${activeCustomer.unitType || 'Compact'}`, 130, 76);
-
-            docPdf.setFillColor(240, 240, 240);
-            docPdf.rect(20, 90, 170, 10, "F");
-            docPdf.setFont("helvetica", "bold");
-            docPdf.text("Description / Status", 25, 97);
-            docPdf.text("Part Replaced", 90, 97);
-            docPdf.text("Amount", 160, 97);
-
-            docPdf.setFont("helvetica", "normal");
-            docPdf.text(`${status}`, 25, 110);
-            docPdf.text(`${partReplaced}`, 90, 110);
-            docPdf.text(`Rs. ${amount}/-`, 160, 110);
-
-            docPdf.line(20, 120, 190, 120);
-            docPdf.text(`Remark: ${remark || 'None'}`, 20, 132);
-            docPdf.text(`Next Service Due: ${nextServiceDateStr}`, 20, 142);
-
-            docPdf.text("Customer Signature", 140, 175);
-            docPdf.text("For Om Water Solution", 25, 175);
-
-            const pdfBlobUrl = docPdf.output('bloburl');
-            window.open(pdfBlobUrl, '_blank');
-
-            const whatsappMsg = encodeURIComponent(`Hello ${activeCustomer.name}, thank you for choosing Om Water Solution. Your service is completed successfully. Next service due on ${nextServiceDateStr}. Amount paid: Rs. ${amount}/-`);
-            window.open(`https://wa.me/91${activeCustomer.phone}?text=${whatsappMsg}`, '_blank');
-
-            serviceModal.classList.add('hidden');
-            serviceModal.classList.remove('flex');
-            fetchTechTasks();
-
+            addCxModal.classList.add('hidden');
+            addCxModal.classList.remove('flex');
+            document.getElementById('add-cx-form').reset();
+            alert("Customer added successfully with Bill ID: " + billNo);
         } catch (err) {
             console.error(err);
-            alert("Error updating service record.");
+            alert("Error adding customer");
         } finally {
-            btn.textContent = "Save Record & Download PDF Bill";
-            btn.disabled = false;
+            btn.textContent = "Save & Set Initial Service"; btn.disabled = false;
         }
     });
 
-    if(logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            sessionStorage.clear();
-            window.location.replace('index.html');
-        });
-    }
+    // --- Service Complete & PDF Logic ---
+    window.openServiceModal = (id, name, phone) => {
+        document.getElementById('cust-id').value = id;
+        document.getElementById('cust-name').value = name;
+        document.getElementById('cust-phone').value = phone;
+        
+        document.getElementById('whatsapp-container').classList.add('hidden');
+        document.getElementById('generate-btn').classList.remove('hidden');
+        
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    };
 
-    fetchTechTasks();
+    document.getElementById('close-modal').addEventListener('click', () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        form.reset();
+    });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('generate-btn');
+        btn.textContent = "Generating PDF..."; btn.disabled = true;
+
+        try {
+            const customerId = document.getElementById('cust-id').value;
+            const customerName = document.getElementById('cust-name').value;
+            const customerPhone = document.getElementById('cust-phone').value;
+            const amount = document.getElementById('service-amount').value;
+            const notes = document.getElementById('service-notes').value;
+            
+            let parts = [];
+            document.querySelectorAll('.part-check:checked').forEach(cb => parts.push(cb.value));
+            
+            let finalDescription = parts.length > 0 ? parts.join(', ') : 'General Service';
+            if(notes) finalDescription += ` (${notes})`;
+
+            const billNo = `OWS-SRV-${Math.floor(1000 + Math.random() * 9000)}`;
+            document.getElementById('inv-date').textContent = new Date().toLocaleDateString('en-IN');
+            document.getElementById('inv-no').textContent = billNo;
+            document.getElementById('inv-cust-name').textContent = customerName;
+            document.getElementById('inv-cust-phone').textContent = "+91 " + customerPhone;
+            document.getElementById('inv-parts').textContent = finalDescription;
+            document.getElementById('inv-amount').textContent = `₹ ${amount}`;
+
+            const element = document.getElementById('invoice-template');
+            const opt = {
+                margin: 0,
+                filename: `OWS_Bill_${customerName.replace(/\s+/g, '_')}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+
+            await html2pdf().set(opt).from(element).save();
+
+            // Save log to sub-collection
+            await addDoc(collection(db, "customers", customerId, "service_logs"), {
+                date: new Date().toISOString().split('T')[0],
+                status: "Service Completed",
+                partReplaced: finalDescription,
+                amount: amount,
+                engineer: "Amey (Tech)",
+                remark: "Service completed & PDF generated",
+                createdAt: serverTimestamp()
+            });
+
+            const nextDate = new Date();
+            nextDate.setMonth(nextDate.getMonth() + 3);
+            const nextServiceDateStr = nextDate.toISOString().split('T')[0];
+
+            await updateDoc(doc(db, "customers", customerId), {
+                nextServiceDate: nextServiceDateStr,
+                lastServiceAmount: amount,
+                lastServiceDetails: finalDescription
+            });
+
+            const waMsg = encodeURIComponent(`Hello ${customerName},\nYour RO water service is completed.\n*Bill ID:* ${billNo}\n*Amount Paid:* ₹${amount}\n\nPlease find your service invoice attached in this chat.\n\n*Om Water Solution*`);
+            document.getElementById('whatsapp-btn').href = `https://wa.me/91${customerPhone}?text=${waMsg}`;
+            
+            btn.classList.add('hidden');
+            document.getElementById('whatsapp-container').classList.remove('hidden');
+
+        } catch (error) {
+            console.error(error);
+            alert("Error generating bill!");
+            btn.textContent = "Complete & Generate Bill PDF"; btn.disabled = false;
+        }
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', () => {
+        sessionStorage.clear();
+        window.location.replace('index.html');
+    });
+
+    // Initialize Real-time listener
+    initRealtimeTasks();
 });

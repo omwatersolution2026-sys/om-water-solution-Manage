@@ -13,63 +13,63 @@
     <!-- Navbar -->
     <nav class="bg-purple-600 text-white px-6 py-4 flex justify-between items-center shadow-md sticky top-0 z-10">
         <div>
-            <h1 class="font-bold text-lg">Marketing & Calling HQ</h1>
-            <p class="text-xs text-purple-100">Om Water Solution Leads</p>
+            <h1 class="font-bold text-lg leading-tight">Marketing HQ</h1>
+            <p class="text-xs text-purple-100 font-medium">Om Water Solution Leads</p>
         </div>
-        <button id="logout-btn" class="text-sm bg-white/20 px-4 py-2 rounded-lg font-medium hover:bg-white/30 transition">Logout</button>
+        <button id="logout-btn" class="text-sm bg-white/20 px-4 py-2 rounded-lg font-bold hover:bg-white/30 transition">Logout</button>
     </nav>
 
-    <div class="max-w-7xl mx-auto p-6 space-y-6">
+    <div class="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
         
         <!-- Live Search Bar for Calling Team -->
         <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-200 flex items-center gap-2">
             <svg class="w-5 h-5 text-gray-400 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            <input type="text" id="mkt-search-input" placeholder="Search lead by name, phone number, or bill ID..." class="w-full bg-transparent outline-none text-sm font-medium text-gray-700">
+            <input type="text" id="mkt-search-input" placeholder="Search by customer name, phone, or bill ID..." class="w-full bg-transparent outline-none text-sm font-medium text-gray-700">
             <button id="mkt-clear-search" class="text-xs font-bold text-gray-400 hover:text-red-500 px-2 py-1 hidden">Clear</button>
         </div>
 
         <!-- Action Header & Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-purple-500">
-                <p class="text-xs font-bold text-gray-400 uppercase">Total Leads / CX</p>
-                <h3 class="text-2xl font-black text-gray-800" id="mkt-total">0</h3>
+                <p class="text-[10px] sm:text-xs font-bold text-gray-400 uppercase">Total Leads</p>
+                <h3 class="text-xl sm:text-2xl font-black text-gray-800" id="mkt-total">0</h3>
             </div>
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-yellow-500">
-                <p class="text-xs font-bold text-gray-400 uppercase">Pending Calls</p>
-                <h3 class="text-2xl font-black text-yellow-600" id="mkt-pending">0</h3>
+                <p class="text-[10px] sm:text-xs font-bold text-gray-400 uppercase">Pending Calls</p>
+                <h3 class="text-xl sm:text-2xl font-black text-yellow-600" id="mkt-pending">0</h3>
             </div>
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-green-500">
-                <p class="text-xs font-bold text-gray-400 uppercase">Converted / Scheduled</p>
-                <h3 class="text-2xl font-black text-green-600" id="mkt-converted">0</h3>
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-green-500 col-span-2 md:col-span-1">
+                <p class="text-[10px] sm:text-xs font-bold text-gray-400 uppercase">Scheduled for Tech</p>
+                <h3 class="text-xl sm:text-2xl font-black text-green-600" id="mkt-converted">0</h3>
             </div>
-            <div class="flex items-center">
-                <button id="open-add-cx-btn" class="w-full bg-purple-600 text-white font-bold py-4 px-4 rounded-2xl shadow-md hover:bg-purple-700 transition flex items-center justify-center gap-2 text-sm">
+            <div class="flex items-center col-span-2 md:col-span-1">
+                <button id="open-add-cx-btn" class="w-full h-full bg-purple-600 text-white font-bold py-3 sm:py-4 px-4 rounded-2xl shadow-md hover:bg-purple-700 transition flex items-center justify-center gap-2 text-sm">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    <span>+ Add New Lead / CX</span>
+                    <span>+ Add New Lead</span>
                 </button>
             </div>
         </div>
 
         <!-- Calling Table Section -->
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <h2 class="text-lg font-bold text-gray-800">Calling & Follow-up Queue</h2>
-                <div class="flex bg-gray-100 p-1 rounded-lg">
-                    <button class="mkt-filter-btn px-4 py-1.5 text-sm font-semibold rounded-md bg-white shadow text-gray-800" data-filter="all">All</button>
-                    <button class="mkt-filter-btn px-4 py-1.5 text-sm font-semibold rounded-md text-gray-500 hover:text-gray-800" data-filter="pending">Pending</button>
-                    <button class="mkt-filter-btn px-4 py-1.5 text-sm font-semibold rounded-md text-gray-500 hover:text-gray-800" data-filter="done">Completed</button>
+            <div class="p-4 sm:p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <h2 class="text-lg font-bold text-gray-800">Follow-up & Calling Queue</h2>
+                <div class="flex bg-gray-100 p-1 rounded-lg w-full sm:w-auto overflow-x-auto">
+                    <button class="mkt-filter-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-md bg-white shadow text-gray-800 whitespace-nowrap" data-filter="all">All Records</button>
+                    <button class="mkt-filter-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-md text-gray-500 hover:text-gray-800 whitespace-nowrap" data-filter="pending">To Call / Pending</button>
+                    <button class="mkt-filter-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-md text-gray-500 hover:text-gray-800 whitespace-nowrap" data-filter="done">Scheduled / Done</button>
                 </div>
             </div>
 
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
+                <table class="w-full text-left border-collapse min-w-[700px]">
                     <thead>
                         <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-200">
                             <th class="p-4 font-bold">Customer Details</th>
-                            <th class="p-4 font-bold">Next Service / Follow-up</th>
-                            <th class="p-4 font-bold">Calling Status</th>
-                            <th class="p-4 font-bold">Remarks</th>
-                            <th class="p-4 font-bold text-right">Actions</th>
+                            <th class="p-4 font-bold">Service Due Date</th>
+                            <th class="p-4 font-bold">Current Status</th>
+                            <th class="p-4 font-bold">Last Remark</th>
+                            <th class="p-4 font-bold text-right">Action</th>
                         </tr>
                     </thead>
                     <tbody id="mkt-table-body" class="divide-y divide-gray-100">
@@ -81,55 +81,55 @@
     </div>
 
     <!-- ================= MODAL: UPDATE CALL STATUS ================= -->
-    <div id="call-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
-        <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl">
-            <div class="flex justify-between items-center mb-4 border-b pb-3">
-                <h3 class="text-lg font-bold">Update Calling Status</h3>
-                <button id="close-call-modal" class="text-gray-400 text-2xl font-bold">&times;</button>
+    <div id="call-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-end sm:items-center justify-center z-50 p-4 transition-all">
+        <div class="bg-white w-full sm:max-w-md rounded-3xl p-6 shadow-2xl mb-4 sm:mb-0">
+            <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+                <h3 class="text-lg font-bold text-gray-800">Update Calling Status</h3>
+                <button id="close-call-modal" class="text-gray-400 hover:text-red-500 text-2xl font-bold leading-none">&times;</button>
             </div>
             <form id="call-form" class="space-y-4">
                 <input type="hidden" id="call-cx-id">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Customer Name</label>
-                    <input type="text" id="call-cx-name" readonly class="w-full px-4 py-3 bg-gray-100 border rounded-xl font-semibold text-sm">
+                    <input type="text" id="call-cx-name" readonly class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-700 text-sm outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Status Response</label>
-                    <select id="call-status-select" class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none font-semibold text-sm">
-                        <option value="Pending">Pending Call</option>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Select Response / Status</label>
+                    <select id="call-status-select" class="w-full px-4 py-3 bg-white border border-purple-200 rounded-xl outline-none font-bold text-purple-700 text-sm focus:ring-2 focus:ring-purple-500 transition">
+                        <option value="Pending">Pending Call (To do)</option>
                         <option value="Call Back Later">Call Back Later</option>
-                        <option value="Confirmed / Scheduled">Confirmed / Scheduled</option>
-                        <option value="Not Interested">Not Interested</option>
+                        <option value="Confirmed / Scheduled">Confirmed / Scheduled for Tech</option>
+                        <option value="Not Interested">Not Interested / Cancelled</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Calling Remarks / Notes</label>
-                    <textarea id="call-remarks" rows="3" class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none text-sm" placeholder="e.g. Customer agreed for service on coming Sunday..."></textarea>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Calling Remarks (Visible to Tech/Admin)</label>
+                    <textarea id="call-remarks" rows="3" class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl outline-none text-sm focus:ring-2 focus:ring-purple-500 transition" placeholder="e.g. Customer wants service on Sunday morning..."></textarea>
                 </div>
-                <button type="submit" id="save-call-btn" class="w-full bg-purple-600 text-white font-bold py-3 rounded-xl shadow-md hover:bg-purple-700 transition">Save Call Status</button>
+                <button type="submit" id="save-call-btn" class="w-full bg-purple-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-purple-700 transition mt-2">Save & Push to Tech Portal</button>
             </form>
         </div>
     </div>
 
     <!-- ================= MODAL: ADD NEW LEAD/CUSTOMER ================= -->
-    <div id="add-cx-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
-        <div class="bg-white w-full max-w-lg rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-4 border-b pb-3">
-                <h3 class="text-lg font-bold">Add New Lead / Service Card</h3>
-                <button id="close-add-modal" class="text-gray-400 text-2xl font-bold">&times;</button>
+    <div id="add-cx-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-end sm:items-center justify-center z-50 p-4 transition-all">
+        <div class="bg-white w-full sm:max-w-lg rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto mb-4 sm:mb-0">
+            <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+                <h3 class="text-lg font-bold text-gray-800">Add New Lead / Service Card</h3>
+                <button id="close-add-modal" class="text-gray-400 hover:text-red-500 text-2xl font-bold leading-none">&times;</button>
             </div>
             <form id="add-cx-form" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Customer Name</label>
-                    <input type="text" id="new-name" required class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none text-sm" placeholder="e.g. Ramesh Patil">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Customer Full Name</label>
+                    <input type="text" id="new-name" required class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none text-sm focus:ring-2 focus:ring-purple-500" placeholder="e.g. Ramesh Patil">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Phone Number</label>
-                    <input type="tel" id="new-phone" required class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none text-sm" placeholder="9876543210">
+                    <input type="tel" id="new-phone" required class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none text-sm focus:ring-2 focus:ring-purple-500" placeholder="9876543210">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Full Address</label>
-                    <textarea id="new-address" rows="2" class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none text-sm" placeholder="Location/Society..."></textarea>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Full Address (For Tech)</label>
+                    <textarea id="new-address" rows="2" class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none text-sm focus:ring-2 focus:ring-purple-500" placeholder="Location/Society..."></textarea>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -141,7 +141,7 @@
                         <input type="date" id="new-service-date" required class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none text-sm">
                     </div>
                 </div>
-                <button type="submit" id="save-new-cx-btn" class="w-full bg-slate-900 text-white font-bold py-3 rounded-xl shadow-md hover:bg-black transition">Save & Push to Master Database</button>
+                <button type="submit" id="save-new-cx-btn" class="w-full bg-slate-900 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-black transition mt-2">Save Lead to Database</button>
             </form>
         </div>
     </div>

@@ -34,7 +34,7 @@
 
     <div class="max-w-7xl mx-auto p-6 space-y-6">
         
-        <!-- Search Bar Section (New Feature for Mobile / Bill No Search) -->
+        <!-- Search Bar Section (Customer Kundli Search) -->
         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3">
             <svg class="w-5 h-5 text-slate-400 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             <input type="text" id="global-search-input" placeholder="Search by Customer Name, Mobile Number, or Bill No..." class="w-full bg-transparent outline-none text-sm font-medium text-slate-700">
@@ -78,7 +78,7 @@
             <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
                 <h2 class="text-lg font-bold text-slate-800">Master Service Pipeline</h2>
                 <!-- Filters -->
-                <div class="flex bg-slate-100 p-1 rounded-lg">
+                <div class="flex bg-slate-100 p-1 rounded-lg overflow-x-auto whitespace-nowrap">
                     <button class="filter-btn px-4 py-1.5 text-sm font-semibold rounded-md bg-white shadow text-slate-800" data-filter="all">All</button>
                     <button class="filter-btn px-4 py-1.5 text-sm font-semibold rounded-md text-slate-500 hover:text-slate-800 transition-colors" data-filter="missed">Missed</button>
                     <button class="filter-btn px-4 py-1.5 text-sm font-semibold rounded-md text-slate-500 hover:text-slate-800 transition-colors" data-filter="today">Today</button>
@@ -87,13 +87,13 @@
             </div>
             
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
+                <table class="w-full text-left border-collapse min-w-[800px]">
                     <thead>
                         <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
                             <th class="p-4 font-bold">Customer Info</th>
                             <th class="p-4 font-bold">Contract / Bill ID</th>
-                            <th class="p-4 font-bold">Next Service Date</th>
-                            <th class="p-4 font-bold">Status</th>
+                            <th class="p-4 font-bold">Service Status</th>
+                            <th class="p-4 font-bold">Marketing Update</th>
                             <th class="p-4 font-bold text-right">Actions</th>
                         </tr>
                     </thead>
@@ -156,20 +156,64 @@
         </div>
     </div>
 
-    <!-- MODAL 2: VIEW SERVICE HISTORY GRID -->
-    <div id="history-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-xl rounded-3xl max-h-[90vh] flex flex-col shadow-2xl p-6 overflow-y-auto">
-            <div class="flex justify-between items-center mb-4 border-b pb-3">
-                <h3 id="history-modal-title" class="text-lg font-bold text-slate-800">Service History Card</h3>
-                <button id="close-history-modal" class="text-gray-400 hover:text-red-500 text-2xl font-bold">&times;</button>
+    <!-- MODAL 2: CUSTOMER KUNDLI (FULL PROFILE & HISTORY) -->
+    <div id="kundli-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-2xl rounded-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            
+            <!-- Kundli Header -->
+            <div class="bg-slate-800 text-white p-5 flex justify-between items-center">
+                <div>
+                    <h3 id="kundli-name" class="text-xl font-bold">Customer Name</h3>
+                    <p id="kundli-phone-bill" class="text-sm text-slate-300">📞 Phone • Bill ID: #XXX</p>
+                </div>
+                <button id="close-kundli-modal" class="text-slate-400 hover:text-white text-3xl font-bold leading-none">&times;</button>
             </div>
-            <div id="history-content" class="space-y-3">
-                <!-- Service logs dynamically injected here -->
+            
+            <div class="p-6 overflow-y-auto space-y-6">
+                <!-- Top Highlights -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div class="bg-slate-50 p-3 rounded-xl border">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase">Unit Model</p>
+                        <p id="kundli-unit" class="text-sm font-bold text-slate-800">N/A</p>
+                    </div>
+                    <div class="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                        <p class="text-[10px] font-bold text-blue-500 uppercase">Next Due</p>
+                        <p id="kundli-next-date" class="text-sm font-bold text-blue-800">N/A</p>
+                    </div>
+                    <div class="bg-purple-50 p-3 rounded-xl border border-purple-100">
+                        <p class="text-[10px] font-bold text-purple-500 uppercase">Caller Status</p>
+                        <p id="kundli-call-status" class="text-sm font-bold text-purple-800">N/A</p>
+                    </div>
+                    <div class="bg-green-50 p-3 rounded-xl border border-green-100">
+                        <p class="text-[10px] font-bold text-green-500 uppercase">Total Revenue</p>
+                        <p id="kundli-total-revenue" class="text-sm font-bold text-green-800">₹0</p>
+                    </div>
+                </div>
+
+                <!-- Address & Marketing Remarks -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-xs font-bold text-slate-500 uppercase mb-1">Full Address</p>
+                        <p id="kundli-address" class="text-sm text-slate-700 bg-slate-50 p-3 rounded-xl border min-h-[60px]">N/A</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-500 uppercase mb-1">Latest Calling Remark</p>
+                        <p id="kundli-call-remark" class="text-sm text-slate-700 bg-slate-50 p-3 rounded-xl border min-h-[60px] italic">No remarks</p>
+                    </div>
+                </div>
+
+                <!-- Service History Section -->
+                <div>
+                    <h4 class="text-sm font-bold text-slate-800 mb-3 border-b pb-2">Past Service History & Logs</h4>
+                    <div id="kundli-history-content" class="space-y-3">
+                        <!-- Service logs dynamically injected here -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- MODAL 3: LOG SERVICE FOR EXISTING CUSTOMER -->
+    <!-- MODAL 3: LOG SERVICE FOR EXISTING CUSTOMER (QUICK) -->
     <div id="quick-service-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-lg rounded-3xl max-h-[90vh] flex flex-col shadow-2xl p-6 overflow-y-auto">
             <div class="flex justify-between items-center mb-4 border-b pb-3">

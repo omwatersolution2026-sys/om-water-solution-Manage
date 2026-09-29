@@ -53,10 +53,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Render Tasks (Live Search & Marketing Status View) ---
+    // --- Render Tasks (Live Search, Marketing Status & Tech Updated Checks) ---
     const renderTasks = () => {
         let tasksHTML = '';
-        let today = new Date().toISOString().split('T')[0];
+        let today = new Date().toISOString().split('T')[0]; // Current Date YYYY-MM-DD
 
         let filteredTasks = allTasks.filter(data => {
             if(searchQuery) {
@@ -65,7 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const billMatch = data.billNo && data.billNo.toLowerCase().includes(searchQuery);
                 return nameMatch || phoneMatch || billMatch;
             }
-            // Agar search nahi kar rahe toh default view (Sabhi active dikhao)
             return true; 
         });
 
@@ -79,6 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         filteredTasks.forEach((data) => {
             const isDue = data.nextServiceDate && data.nextServiceDate <= today;
+            const isUpdatedToday = (data.lastServiceDate === today); // Check if Tech already updated it today
             
             // Fetch Marketing Status
             const callStatus = data.callStatus || 'Pending Call';
@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(callStatus === 'Not Interested') statusBadgeColor = 'bg-red-50 text-red-700 border-red-200';
 
             tasksHTML += `
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col justify-between space-y-3">
+                <div class="bg-white p-4 rounded-xl shadow-sm border ${isUpdatedToday ? 'border-green-200 bg-green-50/20' : 'border-gray-200'} flex flex-col justify-between space-y-3">
                     <div class="flex justify-between items-start">
                         <div>
                             <h4 class="font-bold text-gray-900 text-base">${data.name}</h4>
@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p>📅 Next Service: <strong>${data.nextServiceDate || 'N/A'}</strong></p>
                     </div>
 
-                    <!-- CALLING & MARKETING UPDATE BOX (VISIBLE TO TECH) -->
+                    <!-- CALLING & MARKETING UPDATE BOX -->
                     <div class="p-3 rounded-lg border text-xs ${statusBadgeColor} space-y-1">
                         <div class="flex justify-between font-bold">
                             <span>Caller Status: ${callStatus}</span>
@@ -115,10 +115,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p class="text-gray-700 italic">Remark: "${callRemarks}"</p>
                     </div>
                     
-                    <!-- SERVICE UPDATE BUTTON -->
-                    <button onclick="window.openServiceModal('${data.id}', '${data.name}', '${data.phone}')" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl text-sm shadow-md hover:bg-blue-700 transition flex items-center justify-center gap-2 mt-2">
-                        <span>Attend & Update Service</span>
-                    </button>
+                    <!-- SERVICE UPDATE BUTTON (With Logic for Already Updated) -->
+                    ${isUpdatedToday 
+                        ? `<button disabled class="w-full bg-green-100 text-green-700 font-bold py-3 rounded-xl text-sm border border-green-300 shadow-sm cursor-not-allowed mt-2">
+                                ✅ Already Updated Today
+                           </button>`
+                        : `<button onclick="window.openServiceModal('${data.id}', '${data.name}', '${data.phone}')" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl text-sm shadow-md hover:bg-blue-700 transition flex items-center justify-center gap-2 mt-2">
+                                <span>Attend & Update Service</span>
+                           </button>`
+                    }
                 </div>
             `;
         });
@@ -178,7 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Service Complete Logic (NO PDF - Direct DB Update) ---
+    // --- Service Complete Logic (Update DB directly & Push to Admin/Caller) ---
     window.openServiceModal = (id, name, phone) => {
         document.getElementById('cust-id').value = id;
         document.getElementById('cust-name').value = name;
@@ -203,20 +208,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const customerId = document.getElementById('cust-id').value;
             const amount = document.getElementById('service-amount').value;
             const notes = document.getElementById('service-notes').value;
+            const todayStr = new Date().toISOString().split('T')[0];
             
             let parts = [];
             document.querySelectorAll('.part-check:checked').forEach(cb => parts.push(cb.value));
             
             let finalDescription = parts.length > 0 ? parts.join(', ') : 'General Service';
-            if(notes) finalDescription += ` (${notes})`;
+            let techCustomNote = notes ? ` - ${notes}` : '';
 
             // 1. Save log to sub-collection
             await addDoc(collection(db, "customers", customerId, "service_logs"), {
-                date: new Date().toISOString().split('T')[0],
+                date: todayStr,
                 status: "Service Completed",
-                partReplaced: finalDescription,
+                partReplaced: finalDescription + techCustomNote,
                 amount: amount,
-                engineer: "Amey (Tech)",
+                engineer: "Tech Field User",
                 remark: "Service completed by technician",
                 createdAt: serverTimestamp()
             });
@@ -226,19 +232,22 @@ document.addEventListener('DOMContentLoaded', () => {
             nextDate.setMonth(nextDate.getMonth() + 3);
             const nextServiceDateStr = nextDate.toISOString().split('T')[0];
 
-            // 3. Update main record & Reset Calling Status for Admin/Marketing
+            // 3. Update main record & Push update to Admin/Caller instantly!
+            const callerUpdateMsg = `✅ Tech Visited (${todayStr.split('-').reverse().join('-')}): Collected ₹${amount}. Work: ${finalDescription}${techCustomNote}`;
+
             await updateDoc(doc(db, "customers", customerId), {
                 nextServiceDate: nextServiceDateStr,
+                lastServiceDate: todayStr,
                 lastServiceAmount: amount,
-                lastServiceDetails: finalDescription,
-                callStatus: "Pending", 
-                callRemarks: "Service completed. Reset for next cycle."
+                lastServiceDetails: finalDescription + techCustomNote,
+                callStatus: "Pending", // Reset for caller so they know it's a new cycle
+                callRemarks: callerUpdateMsg // This will show directly on Marketing Portal!
             });
 
             modal.classList.add('hidden');
             modal.classList.remove('flex');
             form.reset();
-            alert("Service saved successfully! Next due date updated to: " + nextServiceDateStr);
+            alert("Service saved! Button is now disabled to prevent double-entry.");
 
         } catch (error) {
             console.error(error);

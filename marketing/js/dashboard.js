@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('mkt-search-input');
     const clearSearchBtn = document.getElementById('mkt-clear-search');
 
-    // Modals
     const callModal = document.getElementById('call-modal');
     const closeCallModalBtn = document.getElementById('close-call-modal');
     const callForm = document.getElementById('call-form');
@@ -25,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentFilter = 'all';
     let searchQuery = '';
 
-    // --- Modal Toggles (Tailwind flex/hidden handling) ---
+    // --- Modal Toggles ---
     if(openAddCxBtn) {
         openAddCxBtn.addEventListener('click', () => {
             document.getElementById('new-service-date').value = new Date().toISOString().split('T')[0];
@@ -46,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Search Bar Event Listeners ---
+    // --- Search Bar Logic ---
     if(searchInput) {
         searchInput.addEventListener('input', (e) => {
             searchQuery = e.target.value.toLowerCase().trim();
@@ -68,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Real-time Sync with onSnapshot ---
+    // --- Real-time Sync ---
     const initRealtimeMarketing = () => {
         onSnapshot(collection(db, "customers"), (snapshot) => {
             allLeads = [];
@@ -80,7 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     total++;
                     const callStatus = data.callStatus || 'Pending';
                     
-                    // Categorize for Stats
                     if(callStatus === 'Pending' || callStatus === 'Call Back Later') {
                         pending++;
                     } else if(callStatus === 'Confirmed / Scheduled') {
@@ -91,7 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // Update Stats UI
             document.getElementById('mkt-total').textContent = total;
             document.getElementById('mkt-pending').textContent = pending;
             document.getElementById('mkt-converted').textContent = converted;
@@ -103,21 +100,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // --- Render Table with Filters and Search ---
+    // --- Render Table (With Tech Highlight Logic) ---
     const renderTable = (filterCat) => {
         if(!tableBody) return;
         currentFilter = filterCat;
         let html = '';
 
         let filtered = allLeads.filter(item => {
-            // Category Filter
             if(filterCat === 'pending') {
                 if(item.callStatus !== 'Pending' && item.callStatus !== 'Call Back Later') return false;
             } else if(filterCat === 'done') {
                 if(item.callStatus === 'Pending' || item.callStatus === 'Call Back Later') return false;
             }
 
-            // Search Query Filter
             if(searchQuery) {
                 const nameMatch = item.name && item.name.toLowerCase().includes(searchQuery);
                 const phoneMatch = item.phone && item.phone.includes(searchQuery);
@@ -127,16 +122,27 @@ document.addEventListener('DOMContentLoaded', () => {
             return true;
         });
 
-        // Sort: Earliest service date first
         filtered.sort((a, b) => new Date(a.nextServiceDate || '2099-01-01') - new Date(b.nextServiceDate || '2099-01-01'));
 
         if(filtered.length === 0) {
-            html = `<tr><td colspan="5" class="p-8 text-center text-gray-400">No leads or service records found matching your criteria.</td></tr>`;
+            html = `<tr><td colspan="5" class="p-8 text-center text-gray-400">No leads or service records found.</td></tr>`;
         } else {
             filtered.forEach(item => {
                 let badgeColor = 'bg-yellow-50 text-yellow-700 border-yellow-200';
                 if(item.callStatus === 'Confirmed / Scheduled') badgeColor = 'bg-green-50 text-green-700 border-green-200';
                 if(item.callStatus === 'Not Interested') badgeColor = 'bg-red-50 text-red-700 border-red-200';
+
+                // HIGHLIGHT TECH UPDATE LOGIC
+                let remarkText = item.callRemarks || 'No remarks added yet';
+                let remarkDisplay = '';
+                
+                if (remarkText.startsWith('✅ Tech')) {
+                    // Tech update ayega toh green box mein clear dikhega Caller ko
+                    remarkDisplay = `<div class="bg-green-50 border border-green-200 text-green-800 p-2.5 rounded-lg shadow-sm text-xs font-semibold leading-relaxed">${remarkText}</div>`;
+                } else {
+                    // Normal caller remark
+                    remarkDisplay = `<p class="truncate text-xs text-gray-500" title="${remarkText}">${remarkText}</p>`;
+                }
 
                 html += `
                     <tr class="hover:bg-purple-50/30 transition-colors border-b border-gray-50 last:border-0">
@@ -150,11 +156,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td class="p-4">
                             <span class="px-3 py-1 rounded-lg border text-[11px] font-bold inline-block ${badgeColor}">${item.callStatus || 'Pending'}</span>
                         </td>
-                        <td class="p-4 text-xs text-gray-500 max-w-[200px]">
-                            <p class="truncate" title="${item.callRemarks || 'No remarks added yet'}">${item.callRemarks || 'No remarks added yet'}</p>
+                        <td class="p-4 max-w-[250px]">
+                            ${remarkDisplay}
                         </td>
                         <td class="p-4 text-right">
-                            <button onclick="window.openCallModal('${item.id}', '${item.name}', '${item.callStatus || 'Pending'}', '${item.callRemarks || ''}')" class="bg-purple-100 text-purple-700 font-bold px-4 py-2 rounded-xl text-xs hover:bg-purple-200 transition shadow-sm">
+                            <button onclick="window.openCallModal('${item.id}', '${item.name}', '${item.callStatus || 'Pending'}', '${remarkText.replace(/'/g, "\\'")}')" class="bg-purple-100 text-purple-700 font-bold px-4 py-2 rounded-xl text-xs hover:bg-purple-200 transition shadow-sm">
                                 Update Status
                             </button>
                         </td>
@@ -165,12 +171,17 @@ document.addEventListener('DOMContentLoaded', () => {
         tableBody.innerHTML = html;
     };
 
-    // --- Open Call Status Modal ---
+    // --- Open Call Modal ---
     window.openCallModal = (id, name, status, remarks) => {
         document.getElementById('call-cx-id').value = id;
         document.getElementById('call-cx-name').value = name;
         document.getElementById('call-status-select').value = status;
-        document.getElementById('call-remarks').value = remarks === 'No remarks added yet' ? '' : remarks;
+        
+        // Agar tech update wala remark hai, toh usey overwrite karne denge
+        let currentRemark = remarks === 'No remarks added yet' ? '' : remarks;
+        if(currentRemark.startsWith('✅ Tech')) currentRemark = ''; // Clear tech note so caller can type fresh update for next service
+
+        document.getElementById('call-remarks').value = currentRemark;
 
         callModal.classList.remove('hidden');
         callModal.classList.add('flex');
@@ -187,7 +198,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const callStatus = document.getElementById('call-status-select').value;
             const callRemarks = document.getElementById('call-remarks').value;
 
-            // Update main record (syncs live to Admin and Tech)
             await updateDoc(doc(db, "customers", cxId), {
                 callStatus, 
                 callRemarks,
@@ -241,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Filter Buttons Event Listeners
+    // Filter Buttons 
     filterBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
             filterBtns.forEach(b => b.classList.remove('bg-white', 'shadow', 'text-gray-800'));
@@ -261,6 +271,5 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Initialize Real-time Sync
     initRealtimeMarketing();
 });

@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentFilter = 'all';
     let searchQuery = '';
 
-    // --- Modal Toggles ---
+    // --- Modal Toggles (Tailwind flex/hidden handling) ---
     if(openAddCxBtn) {
         openAddCxBtn.addEventListener('click', () => {
             document.getElementById('new-service-date').value = new Date().toISOString().split('T')[0];
@@ -79,11 +79,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(data.status !== "Deleted") {
                     total++;
                     const callStatus = data.callStatus || 'Pending';
+                    
+                    // Categorize for Stats
                     if(callStatus === 'Pending' || callStatus === 'Call Back Later') {
                         pending++;
-                    } else {
+                    } else if(callStatus === 'Confirmed / Scheduled') {
                         converted++;
                     }
+
                     allLeads.push({ id: docSnap.id, ...data, callStatus });
                 }
             });
@@ -124,32 +127,35 @@ document.addEventListener('DOMContentLoaded', () => {
             return true;
         });
 
+        // Sort: Earliest service date first
+        filtered.sort((a, b) => new Date(a.nextServiceDate || '2099-01-01') - new Date(b.nextServiceDate || '2099-01-01'));
+
         if(filtered.length === 0) {
-            html = `<tr><td colspan="5" class="p-8 text-center text-gray-400">No leads or service records found.</td></tr>`;
+            html = `<tr><td colspan="5" class="p-8 text-center text-gray-400">No leads or service records found matching your criteria.</td></tr>`;
         } else {
             filtered.forEach(item => {
-                let badgeColor = 'bg-yellow-100 text-yellow-800';
-                if(item.callStatus === 'Confirmed / Scheduled') badgeColor = 'bg-green-100 text-green-800';
-                if(item.callStatus === 'Not Interested') badgeColor = 'bg-red-100 text-red-800';
+                let badgeColor = 'bg-yellow-50 text-yellow-700 border-yellow-200';
+                if(item.callStatus === 'Confirmed / Scheduled') badgeColor = 'bg-green-50 text-green-700 border-green-200';
+                if(item.callStatus === 'Not Interested') badgeColor = 'bg-red-50 text-red-700 border-red-200';
 
                 html += `
-                    <tr class="hover:bg-gray-50 transition">
+                    <tr class="hover:bg-purple-50/30 transition-colors border-b border-gray-50 last:border-0">
                         <td class="p-4">
                             <p class="font-bold text-gray-900">${item.name}</p>
-                            <p class="text-xs text-gray-500 mt-0.5">📞 ${item.phone} • <span class="text-purple-600 font-bold">Bill ID: #${item.billNo || 'N/A'}</span></p>
+                            <p class="text-xs text-gray-500 mt-0.5">📞 ${item.phone} • <span class="text-purple-600 font-bold">Bill: #${item.billNo || 'N/A'}</span></p>
                         </td>
-                        <td class="p-4 text-sm text-gray-600">
-                            ${item.nextServiceDate || 'N/A'}
+                        <td class="p-4 text-sm font-semibold text-gray-700">
+                            ${item.nextServiceDate ? new Date(item.nextServiceDate).toLocaleDateString('en-IN') : 'N/A'}
                         </td>
                         <td class="p-4">
-                            <span class="px-3 py-1 rounded-full text-xs font-bold ${badgeColor}">${item.callStatus || 'Pending'}</span>
+                            <span class="px-3 py-1 rounded-lg border text-[11px] font-bold inline-block ${badgeColor}">${item.callStatus || 'Pending'}</span>
                         </td>
-                        <td class="p-4 text-xs text-gray-500 max-w-xs truncate">
-                            ${item.callRemarks || 'No remarks added yet'}
+                        <td class="p-4 text-xs text-gray-500 max-w-[200px]">
+                            <p class="truncate" title="${item.callRemarks || 'No remarks added yet'}">${item.callRemarks || 'No remarks added yet'}</p>
                         </td>
                         <td class="p-4 text-right">
-                            <button onclick="window.openCallModal('${item.id}', '${item.name}', '${item.callStatus || 'Pending'}', '${item.callRemarks || ''}')" class="bg-purple-50 text-purple-600 font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-purple-100 transition">
-                                Update Call
+                            <button onclick="window.openCallModal('${item.id}', '${item.name}', '${item.callStatus || 'Pending'}', '${item.callRemarks || ''}')" class="bg-purple-100 text-purple-700 font-bold px-4 py-2 rounded-xl text-xs hover:bg-purple-200 transition shadow-sm">
+                                Update Status
                             </button>
                         </td>
                     </tr>
@@ -181,19 +187,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const callStatus = document.getElementById('call-status-select').value;
             const callRemarks = document.getElementById('call-remarks').value;
 
+            // Update main record (syncs live to Admin and Tech)
             await updateDoc(doc(db, "customers", cxId), {
-                callStatus, callRemarks,
+                callStatus, 
+                callRemarks,
                 lastCalledAt: serverTimestamp()
             });
 
             callModal.classList.add('hidden');
             callModal.classList.remove('flex');
-            alert("Call status updated successfully!");
+            alert("Call status pushed successfully to Tech/Admin!");
         } catch (err) {
             console.error(err);
             alert("Error updating call status.");
         } finally {
-            btn.textContent = "Save Call Status"; btn.disabled = false;
+            btn.textContent = "Save & Push to Tech Portal"; btn.disabled = false;
         }
     });
 
@@ -224,20 +232,24 @@ document.addEventListener('DOMContentLoaded', () => {
             addCxModal.classList.add('hidden');
             addCxModal.classList.remove('flex');
             addCxForm.reset();
-            alert("New lead added successfully with Bill ID: " + billNo);
+            alert("New lead added successfully! Bill ID: " + billNo);
         } catch (err) {
             console.error(err);
             alert("Error adding lead.");
         } finally {
-            btn.textContent = "Save & Push to Master Database"; btn.disabled = false;
+            btn.textContent = "Save Lead to Database"; btn.disabled = false;
         }
     });
 
     // Filter Buttons Event Listeners
     filterBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
-            filterBtns.forEach(b => b.classList.remove('active', 'bg-white', 'shadow', 'text-gray-800'));
-            e.target.classList.add('active', 'bg-white', 'shadow', 'text-gray-800');
+            filterBtns.forEach(b => b.classList.remove('bg-white', 'shadow', 'text-gray-800'));
+            filterBtns.forEach(b => b.classList.add('text-gray-500'));
+            
+            e.target.classList.remove('text-gray-500');
+            e.target.classList.add('bg-white', 'shadow', 'text-gray-800');
+            
             renderTable(e.target.dataset.filter);
         });
     });

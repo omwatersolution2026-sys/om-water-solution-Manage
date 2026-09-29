@@ -53,12 +53,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Render Tasks (Live Search & Service Update Queue) ---
+    // --- Render Tasks (Live Search & Marketing Status View) ---
     const renderTasks = () => {
         let tasksHTML = '';
         let today = new Date().toISOString().split('T')[0];
 
-        // Agar user search karega toh matching records aayenge, warna due ya saare active customers dikhenge
         let filteredTasks = allTasks.filter(data => {
             if(searchQuery) {
                 const nameMatch = data.name && data.name.toLowerCase().includes(searchQuery);
@@ -66,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const billMatch = data.billNo && data.billNo.toLowerCase().includes(searchQuery);
                 return nameMatch || phoneMatch || billMatch;
             }
-            // Default view: Due today or past due, plus active customers
+            // Agar search nahi kar rahe toh default view (Sabhi active dikhao)
             return true; 
         });
 
@@ -75,24 +74,49 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Sort: Due dates pehle dikhe
+        filteredTasks.sort((a, b) => new Date(a.nextServiceDate || '2099-01-01') - new Date(b.nextServiceDate || '2099-01-01'));
+
         filteredTasks.forEach((data) => {
             const isDue = data.nextServiceDate && data.nextServiceDate <= today;
+            
+            // Fetch Marketing Status
+            const callStatus = data.callStatus || 'Pending Call';
+            const callRemarks = data.callRemarks || 'No remarks from marketing yet';
+
+            // Status Badge Colors
+            let statusBadgeColor = 'bg-yellow-50 text-yellow-700 border-yellow-200';
+            if(callStatus === 'Confirmed / Scheduled') statusBadgeColor = 'bg-green-50 text-green-700 border-green-200';
+            if(callStatus === 'Not Interested') statusBadgeColor = 'bg-red-50 text-red-700 border-red-200';
+
             tasksHTML += `
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
-                    <div class="flex justify-between items-start mb-2">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col justify-between space-y-3">
+                    <div class="flex justify-between items-start">
                         <div>
                             <h4 class="font-bold text-gray-900 text-base">${data.name}</h4>
                             <span class="text-xs text-blue-600 font-bold">Bill ID: #${data.billNo || 'N/A'}</span>
                         </div>
-                        <span class="${isDue ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'} text-[10px] font-bold px-2 py-1 rounded">
+                        <span class="${isDue ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'} text-[10px] font-bold px-2 py-1 rounded">
                             ${isDue ? 'Service Due' : 'Scheduled'}
                         </span>
                     </div>
-                    <p class="text-xs text-gray-600 mb-1">📞 ${data.phone} | 📍 ${data.address || 'Location not added'}</p>
-                    <p class="text-xs text-gray-500 mb-3">📅 Next Service Date: <strong>${data.nextServiceDate || 'N/A'}</strong></p>
+
+                    <div class="text-xs text-gray-600 space-y-1">
+                        <p>📞 Phone: <a href="tel:${data.phone}" class="text-blue-600 font-semibold">${data.phone}</a></p>
+                        <p>📍 Address: ${data.address || 'Location not added'}</p>
+                        <p>📅 Next Service: <strong>${data.nextServiceDate || 'N/A'}</strong></p>
+                    </div>
+
+                    <!-- CALLING & MARKETING UPDATE BOX (VISIBLE TO TECH) -->
+                    <div class="p-3 rounded-lg border text-xs ${statusBadgeColor} space-y-1">
+                        <div class="flex justify-between font-bold">
+                            <span>Caller Status: ${callStatus}</span>
+                        </div>
+                        <p class="text-gray-700 italic">Remark: "${callRemarks}"</p>
+                    </div>
                     
-                    <!-- MAIN SERVICE UPDATE BUTTON -->
-                    <button onclick="window.openServiceModal('${data.id}', '${data.name}', '${data.phone}')" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-lg text-sm shadow hover:bg-blue-700 transition flex items-center justify-center gap-2">
+                    <!-- SERVICE UPDATE BUTTON -->
+                    <button onclick="window.openServiceModal('${data.id}', '${data.name}', '${data.phone}')" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl text-sm shadow-md hover:bg-blue-700 transition flex items-center justify-center gap-2 mt-2">
                         <span>Attend & Update Service</span>
                     </button>
                 </div>
@@ -102,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
         taskListEl.innerHTML = tasksHTML;
     };
 
-    // --- Add Customer Modal Logic (Tech Side) ---
+    // --- Add Customer Modal Logic ---
     const addCxModal = document.getElementById('add-cx-modal');
     document.getElementById('open-add-cx-btn').addEventListener('click', () => {
         addCxModal.classList.remove('hidden');
@@ -136,6 +160,8 @@ document.addEventListener('DOMContentLoaded', () => {
             await addDoc(collection(db, "customers"), {
                 name, phone, address, unitType, billNo,
                 status: "Active",
+                callStatus: "Pending",
+                callRemarks: "Added from Tech portal",
                 nextServiceDate: nextDate.toISOString().split('T')[0],
                 createdAt: serverTimestamp()
             });
@@ -152,14 +178,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Service Complete & PDF Logic ---
+    // --- Service Complete Logic (NO PDF - Direct DB Update) ---
     window.openServiceModal = (id, name, phone) => {
         document.getElementById('cust-id').value = id;
         document.getElementById('cust-name').value = name;
         document.getElementById('cust-phone').value = phone;
-        
-        document.getElementById('whatsapp-container').classList.add('hidden');
-        document.getElementById('generate-btn').classList.remove('hidden');
         
         modal.classList.remove('hidden');
         modal.classList.add('flex');
@@ -173,13 +196,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const btn = document.getElementById('generate-btn');
-        btn.textContent = "Generating PDF..."; btn.disabled = true;
+        const btn = document.getElementById('save-service-btn');
+        btn.textContent = "Saving Service Record..."; btn.disabled = true;
 
         try {
             const customerId = document.getElementById('cust-id').value;
-            const customerName = document.getElementById('cust-name').value;
-            const customerPhone = document.getElementById('cust-phone').value;
             const amount = document.getElementById('service-amount').value;
             const notes = document.getElementById('service-notes').value;
             
@@ -189,56 +210,41 @@ document.addEventListener('DOMContentLoaded', () => {
             let finalDescription = parts.length > 0 ? parts.join(', ') : 'General Service';
             if(notes) finalDescription += ` (${notes})`;
 
-            const billNo = `OWS-SRV-${Math.floor(1000 + Math.random() * 9000)}`;
-            document.getElementById('inv-date').textContent = new Date().toLocaleDateString('en-IN');
-            document.getElementById('inv-no').textContent = billNo;
-            document.getElementById('inv-cust-name').textContent = customerName;
-            document.getElementById('inv-cust-phone').textContent = "+91 " + customerPhone;
-            document.getElementById('inv-parts').textContent = finalDescription;
-            document.getElementById('inv-amount').textContent = `₹ ${amount}`;
-
-            const element = document.getElementById('invoice-template');
-            const opt = {
-                margin: 0,
-                filename: `OWS_Bill_${customerName.replace(/\s+/g, '_')}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-            };
-
-            await html2pdf().set(opt).from(element).save();
-
-            // Save log to sub-collection
+            // 1. Save log to sub-collection
             await addDoc(collection(db, "customers", customerId, "service_logs"), {
                 date: new Date().toISOString().split('T')[0],
                 status: "Service Completed",
                 partReplaced: finalDescription,
                 amount: amount,
                 engineer: "Amey (Tech)",
-                remark: "Service completed & PDF generated",
+                remark: "Service completed by technician",
                 createdAt: serverTimestamp()
             });
 
+            // 2. Next Service Date 3 months forward
             const nextDate = new Date();
             nextDate.setMonth(nextDate.getMonth() + 3);
             const nextServiceDateStr = nextDate.toISOString().split('T')[0];
 
+            // 3. Update main record & Reset Calling Status for Admin/Marketing
             await updateDoc(doc(db, "customers", customerId), {
                 nextServiceDate: nextServiceDateStr,
                 lastServiceAmount: amount,
-                lastServiceDetails: finalDescription
+                lastServiceDetails: finalDescription,
+                callStatus: "Pending", 
+                callRemarks: "Service completed. Reset for next cycle."
             });
 
-            const waMsg = encodeURIComponent(`Hello ${customerName},\nYour RO water service is completed.\n*Bill ID:* ${billNo}\n*Amount Paid:* ₹${amount}\n\nPlease find your service invoice attached in this chat.\n\n*Om Water Solution*`);
-            document.getElementById('whatsapp-btn').href = `https://wa.me/91${customerPhone}?text=${waMsg}`;
-            
-            btn.classList.add('hidden');
-            document.getElementById('whatsapp-container').classList.remove('hidden');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            form.reset();
+            alert("Service saved successfully! Next due date updated to: " + nextServiceDateStr);
 
         } catch (error) {
             console.error(error);
-            alert("Error generating bill!");
-            btn.textContent = "Complete & Generate Bill PDF"; btn.disabled = false;
+            alert("Error saving service record.");
+        } finally {
+            btn.textContent = "Save Service Record & Update Due Date"; btn.disabled = false;
         }
     });
 

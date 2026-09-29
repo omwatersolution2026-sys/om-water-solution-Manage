@@ -20,6 +20,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeAddModalBtn = document.getElementById('close-add-modal');
     const addCxForm = document.getElementById('add-cx-form');
 
+    // NAYA EDIT MODAL
+    const editCxModal = document.getElementById('edit-cx-modal');
+    const closeEditCxBtn = document.getElementById('close-edit-cx-modal');
+    const editCxForm = document.getElementById('edit-cx-form');
+
     let allLeads = [];
     let currentFilter = 'all';
     let searchQuery = '';
@@ -42,6 +47,12 @@ document.addEventListener('DOMContentLoaded', () => {
         closeCallModalBtn.addEventListener('click', () => {
             callModal.classList.add('hidden');
             callModal.classList.remove('flex');
+        });
+    }
+    if(closeEditCxBtn) {
+        closeEditCxBtn.addEventListener('click', () => {
+            editCxModal.classList.add('hidden');
+            editCxModal.classList.remove('flex');
         });
     }
 
@@ -100,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // --- Render Table (With Tech Highlight Logic) ---
+    // --- Render Table ---
     const renderTable = (filterCat) => {
         if(!tableBody) return;
         currentFilter = filterCat;
@@ -132,15 +143,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(item.callStatus === 'Confirmed / Scheduled') badgeColor = 'bg-green-50 text-green-700 border-green-200';
                 if(item.callStatus === 'Not Interested') badgeColor = 'bg-red-50 text-red-700 border-red-200';
 
-                // HIGHLIGHT TECH UPDATE LOGIC
                 let remarkText = item.callRemarks || 'No remarks added yet';
                 let remarkDisplay = '';
                 
                 if (remarkText.startsWith('✅ Tech')) {
-                    // Tech update ayega toh green box mein clear dikhega Caller ko
                     remarkDisplay = `<div class="bg-green-50 border border-green-200 text-green-800 p-2.5 rounded-lg shadow-sm text-xs font-semibold leading-relaxed">${remarkText}</div>`;
                 } else {
-                    // Normal caller remark
                     remarkDisplay = `<p class="truncate text-xs text-gray-500" title="${remarkText}">${remarkText}</p>`;
                 }
 
@@ -156,13 +164,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td class="p-4">
                             <span class="px-3 py-1 rounded-lg border text-[11px] font-bold inline-block ${badgeColor}">${item.callStatus || 'Pending'}</span>
                         </td>
-                        <td class="p-4 max-w-[250px]">
+                        <td class="p-4 max-w-[200px]">
                             ${remarkDisplay}
                         </td>
                         <td class="p-4 text-right">
-                            <button onclick="window.openCallModal('${item.id}', '${item.name}', '${item.callStatus || 'Pending'}', '${remarkText.replace(/'/g, "\\'")}')" class="bg-purple-100 text-purple-700 font-bold px-4 py-2 rounded-xl text-xs hover:bg-purple-200 transition shadow-sm">
-                                Update Status
-                            </button>
+                            <div class="flex flex-col gap-2 items-end">
+                                <button onclick="window.openCallModal('${item.id}', '${item.name}', '${item.callStatus || 'Pending'}', '${remarkText.replace(/'/g, "\\'")}')" class="w-full bg-purple-100 text-purple-700 font-bold px-4 py-2 rounded-xl text-xs hover:bg-purple-200 transition shadow-sm">
+                                    Update Status
+                                </button>
+                                <button onclick="window.openEditModal('${item.id}')" class="w-full bg-slate-800 text-white font-semibold px-4 py-1.5 rounded-xl text-xs hover:bg-black transition shadow-sm">
+                                    Edit Date / Info
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -171,15 +184,57 @@ document.addEventListener('DOMContentLoaded', () => {
         tableBody.innerHTML = html;
     };
 
+    // --- NAYA FUNCTION: OPEN EDIT MODAL ---
+    window.openEditModal = (id) => {
+        const cx = allLeads.find(c => c.id === id);
+        if(!cx) return;
+
+        document.getElementById('edit-cx-id').value = id;
+        document.getElementById('edit-name').value = cx.name || '';
+        document.getElementById('edit-phone').value = cx.phone || '';
+        document.getElementById('edit-address').value = cx.address || '';
+        document.getElementById('edit-unit').value = cx.unitType || '';
+        document.getElementById('edit-next-date').value = cx.nextServiceDate || '';
+
+        editCxModal.classList.remove('hidden');
+        editCxModal.classList.add('flex');
+    };
+
+    // --- NAYA FUNCTION: SAVE EDITED DATA ---
+    editCxForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('save-edit-btn');
+        btn.textContent = "Updating..."; btn.disabled = true;
+
+        try {
+            const id = document.getElementById('edit-cx-id').value;
+            await updateDoc(doc(db, "customers", id), {
+                name: document.getElementById('edit-name').value,
+                phone: document.getElementById('edit-phone').value,
+                address: document.getElementById('edit-address').value,
+                unitType: document.getElementById('edit-unit').value,
+                nextServiceDate: document.getElementById('edit-next-date').value
+            });
+
+            editCxModal.classList.add('hidden');
+            editCxModal.classList.remove('flex');
+            alert("Customer details and Service Date updated successfully! Tech field is updated.");
+        } catch (error) {
+            console.error("Error updating doc", error);
+            alert("Failed to update record.");
+        } finally {
+            btn.textContent = "Update Customer Data"; btn.disabled = false;
+        }
+    });
+
     // --- Open Call Modal ---
     window.openCallModal = (id, name, status, remarks) => {
         document.getElementById('call-cx-id').value = id;
         document.getElementById('call-cx-name').value = name;
         document.getElementById('call-status-select').value = status;
         
-        // Agar tech update wala remark hai, toh usey overwrite karne denge
         let currentRemark = remarks === 'No remarks added yet' ? '' : remarks;
-        if(currentRemark.startsWith('✅ Tech')) currentRemark = ''; // Clear tech note so caller can type fresh update for next service
+        if(currentRemark.startsWith('✅ Tech')) currentRemark = ''; 
 
         document.getElementById('call-remarks').value = currentRemark;
 

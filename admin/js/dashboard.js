@@ -1,6 +1,6 @@
 // admin/js/dashboard.js
 
-import { onSnapshot, collection, addDoc, updateDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+import { onSnapshot, collection, getDocs, addDoc, updateDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 import { db } from "./firebase-config.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -25,10 +25,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closeAddCxBtn = document.getElementById('close-add-cx-modal');
     const addCxForm = document.getElementById('add-cx-form');
 
-    const historyModal = document.getElementById('history-modal');
-    const closeHistoryBtn = document.getElementById('close-history-modal');
-    const historyContent = document.getElementById('history-content');
-    const historyTitle = document.getElementById('history-modal-title');
+    const kundliModal = document.getElementById('kundli-modal');
+    const closeKundliBtn = document.getElementById('close-kundli-modal');
 
     const quickServiceModal = document.getElementById('quick-service-modal');
     const openQuickServiceBtn = document.getElementById('open-quick-service-btn');
@@ -45,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     openAddCxBtn.addEventListener('click', () => { addCxModal.classList.remove('hidden'); addCxModal.classList.add('flex'); });
     closeAddCxBtn.addEventListener('click', () => { addCxModal.classList.add('hidden'); addCxModal.classList.remove('flex'); });
 
-    closeHistoryBtn.addEventListener('click', () => { historyModal.classList.add('hidden'); historyModal.classList.remove('flex'); });
+    closeKundliBtn.addEventListener('click', () => { kundliModal.classList.add('hidden'); kundliModal.classList.remove('flex'); });
 
     openQuickServiceBtn.addEventListener('click', () => {
         populateCustomerDropdown();
@@ -147,18 +145,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         if(manualFieldsDiv) manualFieldsDiv.classList.add('hidden');
     };
 
-    // --- Render Table with Search and Filters ---
+    // --- Render Master Table ---
     const renderTable = (filterCat) => {
         if(!tableBody) return;
         currentFilter = filterCat;
         let html = '';
 
-        // Filter by category first
         let filteredData = filterCat === 'all' 
             ? masterData 
             : masterData.filter(item => item.statusObj.category === filterCat);
 
-        // Filter by Search Query (Name, Phone, or Bill No)
         if(searchQuery) {
             filteredData = filteredData.filter(item => {
                 const nameMatch = item.name && item.name.toLowerCase().includes(searchQuery);
@@ -174,6 +170,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             filteredData.sort((a, b) => new Date(a.nextServiceDate || '2099-01-01') - new Date(b.nextServiceDate || '2099-01-01'));
 
             filteredData.forEach(item => {
+                const callStatus = item.callStatus || 'Pending Call';
+                let mktBadge = 'bg-yellow-50 text-yellow-700';
+                if(callStatus === 'Confirmed / Scheduled') mktBadge = 'bg-green-50 text-green-700';
+                if(callStatus === 'Not Interested') mktBadge = 'bg-red-50 text-red-700';
+
                 html += `
                     <tr class="hover:bg-slate-50 transition-colors">
                         <td class="p-4">
@@ -182,17 +183,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </td>
                         <td class="p-4 text-sm text-slate-600">
                             <span class="font-semibold block text-slate-800">${item.unitType || 'Compact'}</span>
-                            <span class="text-xs text-blue-600 font-bold">Bill ID: #${item.billNo || 'N/A'}</span> (₹${item.amount || '0'})
+                            <span class="text-xs text-blue-600 font-bold">Bill ID: #${item.billNo || 'N/A'}</span>
                         </td>
                         <td class="p-4">
-                            <span class="font-semibold text-slate-700">${item.nextServiceDate ? new Date(item.nextServiceDate).toLocaleDateString('en-IN') : '-'}</span>
+                            <p class="font-semibold text-slate-700 mb-1">${item.nextServiceDate ? new Date(item.nextServiceDate).toLocaleDateString('en-IN') : '-'}</p>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.statusObj.class}">${item.statusObj.text}</span>
                         </td>
                         <td class="p-4">
-                            <span class="px-3 py-1 rounded-full text-xs font-bold ${item.statusObj.class}">${item.statusObj.text}</span>
+                            <span class="px-2 py-1 rounded text-xs font-bold block w-max mb-1 ${mktBadge}">${callStatus}</span>
+                            <p class="text-[11px] text-slate-500 max-w-[150px] truncate" title="${item.callRemarks || ''}">${item.callRemarks || 'No updates yet'}</p>
                         </td>
                         <td class="p-4 text-right">
-                            <button onclick="window.viewServiceHistory('${item.id}', '${item.name}')" class="bg-blue-50 text-blue-600 font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-blue-100 transition">
-                                View History Card
+                            <button onclick="window.viewKundli('${item.id}')" class="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg text-xs shadow hover:bg-blue-700 transition">
+                                View Profile
                             </button>
                         </td>
                     </tr>
@@ -202,51 +205,81 @@ document.addEventListener('DOMContentLoaded', async () => {
         tableBody.innerHTML = html;
     };
 
-    // --- View Service History Grid (Physical Card View) ---
-    window.viewServiceHistory = async (cxId, cxName) => {
-        historyTitle.textContent = `Service History Card: ${cxName}`;
-        historyContent.innerHTML = `<div class="p-4 text-center text-slate-400">Loading service logs...</div>`;
-        historyModal.classList.remove('hidden');
-        historyModal.classList.add('flex');
+    // --- KUNDLI (FULL PROFILE) LOGIC ---
+    window.viewKundli = async (cxId) => {
+        // Find customer data
+        const cx = masterData.find(c => c.id === cxId);
+        if(!cx) return;
+
+        // Populate Modal Headers
+        document.getElementById('kundli-name').textContent = cx.name;
+        document.getElementById('kundli-phone-bill').textContent = `📞 ${cx.phone} • Bill ID: #${cx.billNo || 'N/A'}`;
+        document.getElementById('kundli-unit').textContent = cx.unitType || 'N/A';
+        document.getElementById('kundli-next-date').textContent = cx.nextServiceDate ? new Date(cx.nextServiceDate).toLocaleDateString('en-IN') : 'N/A';
+        document.getElementById('kundli-call-status').textContent = cx.callStatus || 'Pending Call';
+        document.getElementById('kundli-address').textContent = cx.address || 'Location not added';
+        document.getElementById('kundli-call-remark').textContent = cx.callRemarks || 'No remarks recorded yet';
+
+        const historyContent = document.getElementById('kundli-history-content');
+        const revenueEl = document.getElementById('kundli-total-revenue');
+        
+        historyContent.innerHTML = `<div class="p-4 text-center text-slate-400 text-sm">Fetching detailed service logs...</div>`;
+        revenueEl.textContent = 'Calculating...';
+
+        kundliModal.classList.remove('hidden');
+        kundliModal.classList.add('flex');
 
         try {
-            const { getDocs, collection } = await import("https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js");
             const logsSnapshot = await getDocs(collection(db, "customers", cxId, "service_logs"));
+            let totalRevenue = Number(cx.amount || 0); // Include initial contract amount
+
             let logsHtml = `
-                <div class="bg-slate-50 p-3 rounded-xl border text-xs font-bold grid grid-cols-4 gap-2 text-slate-500 uppercase">
+                <div class="bg-slate-100 p-3 rounded-xl text-[11px] font-bold grid grid-cols-4 gap-2 text-slate-500 uppercase tracking-wider">
                     <div>Date / Status</div>
                     <div>Part Replaced</div>
                     <div>Amount</div>
-                    <div>Engineer</div>
+                    <div>Tech/Caller</div>
                 </div>
             `;
 
             if(logsSnapshot.empty) {
-                logsHtml += `<div class="p-6 text-center text-slate-400 text-sm">No service history logs recorded yet.</div>`;
+                logsHtml += `<div class="p-6 text-center text-slate-400 text-sm border rounded-xl mt-2">No past service logs found.</div>`;
             } else {
-                logsSnapshot.forEach(logDoc => {
-                    const log = logDoc.data();
+                let logsArray = [];
+                logsSnapshot.forEach(doc => logsArray.push(doc.data()));
+                
+                // Sort by date descending
+                logsArray.sort((a, b) => new Date(b.date || '1970-01-01') - new Date(a.date || '1970-01-01'));
+
+                logsArray.forEach(log => {
+                    const logAmt = Number(log.amount || 0);
+                    totalRevenue += logAmt;
+
                     logsHtml += `
-                        <div class="bg-white p-3 rounded-xl border border-slate-100 text-sm grid grid-cols-4 gap-2 items-center shadow-sm">
+                        <div class="bg-white p-3 mt-2 rounded-xl border border-slate-100 text-sm grid grid-cols-4 gap-2 items-center shadow-sm hover:shadow transition">
                             <div>
                                 <span class="font-bold text-slate-800 block">${log.date || 'N/A'}</span>
-                                <span class="text-[11px] text-blue-600 font-semibold">${log.status || 'Service'}</span>
+                                <span class="text-[11px] text-blue-600 font-semibold">${log.status || 'Service Update'}</span>
                             </div>
                             <div class="text-slate-600 text-xs">${log.partReplaced || 'None'}</div>
-                            <div class="font-bold text-slate-800">₹${log.amount || '0'}</div>
-                            <div class="text-xs text-slate-500">${log.engineer || 'Amey'}</div>
+                            <div class="font-bold text-green-700">₹${logAmt}</div>
+                            <div class="text-xs text-slate-500 font-medium">${log.engineer || 'System'}</div>
                         </div>
                     `;
                 });
             }
+
+            revenueEl.textContent = `₹${totalRevenue.toLocaleString('en-IN')}`;
             historyContent.innerHTML = logsHtml;
+
         } catch (err) {
             console.error(err);
-            historyContent.innerHTML = `<div class="p-4 text-center text-red-500">Failed to load history.</div>`;
+            historyContent.innerHTML = `<div class="p-4 text-center text-red-500 text-sm">Failed to load history logs.</div>`;
+            revenueEl.textContent = 'Error';
         }
     };
 
-    // --- Add New Customer Form with Auto Parent Bill Number Generation ---
+    // --- Add New Customer Form ---
     addCxForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('save-cx-btn');
@@ -275,6 +308,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             await addDoc(collection(db, "customers"), {
                 name, phone, address, unitType, startDate, endDate, nextServiceDate, amount, billNo,
                 status: "Active",
+                callStatus: "Pending",
+                callRemarks: "Newly added service card",
                 createdAt: serverTimestamp()
             });
 
@@ -328,6 +363,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     amount: Number(amount),
                     billNo: autoBillNo,
                     status: "Active",
+                    callStatus: "Pending",
+                    callRemarks: "Added via manual paper bill entry",
                     createdAt: serverTimestamp()
                 });
                 cxId = newCxRef.id;
@@ -351,9 +388,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             nextDt.setMonth(nextDt.getMonth() + 3);
             const nextServiceDateStr = nextDt.toISOString().split('T')[0];
 
-            // 3. Update main record
+            // 3. Update main record and reset calling status
             await updateDoc(doc(db, "customers", cxId), {
-                nextServiceDate: nextServiceDateStr
+                nextServiceDate: nextServiceDateStr,
+                callStatus: "Pending",
+                callRemarks: "Service logged, pending for next cycle"
             });
 
             quickServiceModal.classList.add('hidden');

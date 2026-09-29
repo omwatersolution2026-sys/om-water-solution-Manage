@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderTable(currentFilter);
         }, (error) => {
             console.error("Real-time sync error:", error);
-            if(tableBody) tableBody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-red-500">Failed to sync live data.</td></tr>`;
+            if(tableBody) tableBody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-500">Failed to sync live data.</td></tr>`;
         });
     };
 
@@ -165,18 +165,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if(filteredData.length === 0) {
-            html = `<tr><td colspan="5" class="p-8 text-center text-slate-400">No matching customer records found.</td></tr>`;
+            html = `<tr><td colspan="6" class="p-8 text-center text-slate-400">No matching customer records found.</td></tr>`;
         } else {
             filteredData.sort((a, b) => new Date(a.nextServiceDate || '2099-01-01') - new Date(b.nextServiceDate || '2099-01-01'));
 
             filteredData.forEach(item => {
+                // Marketing Status Badge Logic
                 const callStatus = item.callStatus || 'Pending Call';
                 let mktBadge = 'bg-yellow-50 text-yellow-700';
                 if(callStatus === 'Confirmed / Scheduled') mktBadge = 'bg-green-50 text-green-700';
                 if(callStatus === 'Not Interested') mktBadge = 'bg-red-50 text-red-700';
 
+                // Tech Update Details Logic
+                const techDate = item.lastServiceDate ? new Date(item.lastServiceDate).toLocaleDateString('en-IN') : 'N/A';
+                const techAmount = item.lastServiceAmount || '0';
+                const techDetails = item.lastServiceDetails || 'No tech updates yet';
+                
+                // Highlight Tech box if updated today
+                let techBadge = item.lastServiceDate === getTodayStr() ? 'bg-green-50 text-green-800 border-green-200 shadow-sm' : 'bg-slate-50 text-slate-700 border-slate-200';
+
                 html += `
-                    <tr class="hover:bg-slate-50 transition-colors">
+                    <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
                         <td class="p-4">
                             <p class="font-bold text-slate-800">${item.name}</p>
                             <p class="text-xs text-slate-500 mt-0.5">📞 ${item.phone} • 📍 ${item.address || 'N/A'}</p>
@@ -193,6 +202,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <span class="px-2 py-1 rounded text-xs font-bold block w-max mb-1 ${mktBadge}">${callStatus}</span>
                             <p class="text-[11px] text-slate-500 max-w-[150px] truncate" title="${item.callRemarks || ''}">${item.callRemarks || 'No updates yet'}</p>
                         </td>
+                        <!-- NEW: Tech Update Column -->
+                        <td class="p-4">
+                            <div class="text-xs p-2 rounded-lg border ${techBadge} space-y-1">
+                                <p class="font-bold">📅 ${techDate} <span class="text-green-700 ml-1">₹${techAmount}</span></p>
+                                <p class="italic text-slate-600 max-w-[150px] truncate" title="${techDetails}">${techDetails}</p>
+                            </div>
+                        </td>
                         <td class="p-4 text-right">
                             <button onclick="window.viewKundli('${item.id}')" class="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg text-xs shadow hover:bg-blue-700 transition">
                                 View Profile
@@ -207,11 +223,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- KUNDLI (FULL PROFILE) LOGIC ---
     window.viewKundli = async (cxId) => {
-        // Find customer data
         const cx = masterData.find(c => c.id === cxId);
         if(!cx) return;
 
-        // Populate Modal Headers
         document.getElementById('kundli-name').textContent = cx.name;
         document.getElementById('kundli-phone-bill').textContent = `📞 ${cx.phone} • Bill ID: #${cx.billNo || 'N/A'}`;
         document.getElementById('kundli-unit').textContent = cx.unitType || 'N/A';
@@ -231,7 +245,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const logsSnapshot = await getDocs(collection(db, "customers", cxId, "service_logs"));
-            let totalRevenue = Number(cx.amount || 0); // Include initial contract amount
+            let totalRevenue = Number(cx.amount || 0);
 
             let logsHtml = `
                 <div class="bg-slate-100 p-3 rounded-xl text-[11px] font-bold grid grid-cols-4 gap-2 text-slate-500 uppercase tracking-wider">
@@ -248,7 +262,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 let logsArray = [];
                 logsSnapshot.forEach(doc => logsArray.push(doc.data()));
                 
-                // Sort by date descending
                 logsArray.sort((a, b) => new Date(b.date || '1970-01-01') - new Date(a.date || '1970-01-01'));
 
                 logsArray.forEach(log => {
@@ -391,8 +404,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 3. Update main record and reset calling status
             await updateDoc(doc(db, "customers", cxId), {
                 nextServiceDate: nextServiceDateStr,
+                lastServiceDate: serviceDate,
+                lastServiceAmount: amount,
+                lastServiceDetails: partReplaced,
                 callStatus: "Pending",
-                callRemarks: "Service logged, pending for next cycle"
+                callRemarks: "Service logged manually, pending for next cycle"
             });
 
             quickServiceModal.classList.add('hidden');
